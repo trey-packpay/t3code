@@ -145,6 +145,7 @@ export async function reopenClosedView(
       break;
     case "linear-issue":
     case "sentry-issue":
+    case "langsmith-run":
       panels.openIssueTrackerItem(ref, surface);
       break;
     default:

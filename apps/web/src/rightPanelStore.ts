@@ -34,6 +34,8 @@ const RIGHT_PANEL_KINDS = [
   "linear-issue",
   "sentry-issues",
   "sentry-issue",
+  "langsmith-runs",
+  "langsmith-run",
 ] as const;
 export type RightPanelKind = (typeof RIGHT_PANEL_KINDS)[number];
 
@@ -108,6 +110,16 @@ export type RightPanelSurface =
       projectId: ProjectId;
       issueId: string;
       shortId: string;
+    }
+  /** The project's failed LangSmith runs (desktop only). */
+  | { id: "langsmith-runs"; kind: "langsmith-runs" }
+  /** One LangSmith run, a peer tab like `linear-issue`. */
+  | {
+      id: `langsmith-run:${string}`;
+      kind: "langsmith-run";
+      projectId: ProjectId;
+      runId: string;
+      name: string;
     };
 
 const RIGHT_PANEL_STORAGE_KEY = "t3code:right-panel-state:v2";
@@ -162,7 +174,7 @@ interface RightPanelStoreState {
     ref: ScopedThreadRef,
     kind: Exclude<
       RightPanelKind,
-      "file" | "terminal" | "pull-request" | "linear-issue" | "sentry-issue"
+      "file" | "terminal" | "pull-request" | "linear-issue" | "sentry-issue" | "langsmith-run"
     >,
   ) => void;
   openDevice: (ref: ScopedThreadRef, target: DeviceTabTarget, automatic?: boolean) => void;
@@ -210,7 +222,7 @@ interface RightPanelStoreState {
     ref: ScopedThreadRef,
     kind: Exclude<
       RightPanelKind,
-      "file" | "terminal" | "pull-request" | "linear-issue" | "sentry-issue"
+      "file" | "terminal" | "pull-request" | "linear-issue" | "sentry-issue" | "langsmith-run"
     >,
   ) => void;
   setThreadPanelOpen: (
@@ -236,7 +248,13 @@ const DEFAULT_THREAD_PANEL_VISIBILITY: ThreadPanelVisibility = {
 const singletonSurface = (
   kind: Exclude<
     RightPanelKind,
-    "file" | "preview" | "terminal" | "pull-request" | "linear-issue" | "sentry-issue"
+    | "file"
+    | "preview"
+    | "terminal"
+    | "pull-request"
+    | "linear-issue"
+    | "sentry-issue"
+    | "langsmith-run"
   >,
 ): RightPanelSurface => {
   switch (kind) {
@@ -252,6 +270,8 @@ const singletonSurface = (
       return { id: "linear-issues", kind };
     case "sentry-issues":
       return { id: "sentry-issues", kind };
+    case "langsmith-runs":
+      return { id: "langsmith-runs", kind };
   }
 };
 
@@ -326,10 +346,10 @@ export function pullRequestSurface(target: {
   };
 }
 
-/** A single issue tracker item opened beside a thread. LangSmith adds its kind here. */
+/** A single issue tracker item opened beside a thread. */
 export type IssueTrackerItemSurface = Extract<
   RightPanelSurface,
-  { kind: "linear-issue" | "sentry-issue" }
+  { kind: "linear-issue" | "sentry-issue" | "langsmith-run" }
 >;
 
 export function linearIssueSurface(target: {
@@ -355,6 +375,20 @@ export function sentryIssueSurface(target: {
     projectId: target.projectId,
     issueId: target.issueId,
     shortId: target.shortId,
+  };
+}
+
+export function langsmithRunSurface(target: {
+  projectId: ProjectId;
+  runId: string;
+  name: string;
+}): Extract<RightPanelSurface, { kind: "langsmith-run" }> {
+  return {
+    id: `langsmith-run:${encodeURIComponent(target.projectId)}:${encodeURIComponent(target.runId)}`,
+    kind: "langsmith-run",
+    projectId: target.projectId,
+    runId: target.runId,
+    name: target.name,
   };
 }
 

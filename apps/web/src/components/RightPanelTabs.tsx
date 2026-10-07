@@ -98,6 +98,7 @@ export interface IssueTrackerPanelAction {
 const NO_ISSUE_TRACKER_ACTIONS: ReadonlyArray<IssueTrackerPanelAction> = [];
 const LinearGlyph = ISSUE_TRACKER_ICONS.linear;
 const SentryGlyph = ISSUE_TRACKER_ICONS.sentry;
+const LangSmithGlyph = ISSUE_TRACKER_ICONS.langsmith;
 
 function issueTrackerSurfaceActions(actions: ReadonlyArray<IssueTrackerPanelAction>) {
   return actions.map((action) => ({
@@ -643,6 +644,10 @@ function surfaceTitle(
       return "Sentry";
     case "sentry-issue":
       return surface.shortId;
+    case "langsmith-runs":
+      return "LangSmith";
+    case "langsmith-run":
+      return surface.name.length > 24 ? `${surface.name.slice(0, 23)}…` : surface.name;
     case "preview": {
       const snapshot = surface.resourceId ? sessions[surface.resourceId] : null;
       if (!snapshot || snapshot.navStatus._tag === "Idle") return "Browser";
@@ -738,6 +743,9 @@ function SurfaceIcon({
     case "sentry-issues":
     case "sentry-issue":
       return <SentryGlyph className="size-3 shrink-0" />;
+    case "langsmith-runs":
+    case "langsmith-run":
+      return <LangSmithGlyph className="size-3 shrink-0" />;
   }
 }
 

@@ -748,6 +748,25 @@ export const SETTINGS_SEARCH_ITEMS = [
     scope: "project-defaults",
   },
   {
+    id: "langsmith-credentials",
+    title: "LangSmith API key",
+    to: "/settings/integrations",
+    searchTerms: ["langsmith langchain api key endpoint traces connect"],
+    desktopOnly: true,
+    environmentOnly: true,
+    scope: "environment-defaults",
+  },
+  {
+    id: "langsmith-projects",
+    title: "LangSmith projects",
+    to: "/settings/integrations",
+    // The row renders only once an API key is saved, so the result lands on the section.
+    targetId: "issue-trackers",
+    searchTerms: ["langsmith projects traces runs project mapping"],
+    desktopOnly: true,
+    scope: "project-defaults",
+  },
+  {
     id: "automatic-pull",
     title: "Automatically pull",
     to: "/settings/source-control",

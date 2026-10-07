@@ -250,6 +250,7 @@ import {
   linearIssueSurface,
   pullRequestSurface,
   sentryIssueSurface,
+  langsmithRunSurface,
   selectActiveRightPanel,
   selectActiveRightPanelSurface,
   selectThreadPanelOpen,
@@ -292,6 +293,8 @@ import { LinearIssueDetailPanel } from "./linear/LinearIssueDetailPanel";
 import { LinearIssuesPanel } from "./linear/LinearIssuesPanel";
 import { SentryIssueDetailPanel } from "./sentry/SentryIssueDetailPanel";
 import { SentryIssuesPanel } from "./sentry/SentryIssuesPanel";
+import { LangSmithRunDetailPanel } from "./langsmith/LangSmithRunDetailPanel";
+import { LangSmithRunsPanel } from "./langsmith/LangSmithRunsPanel";
 import { LinkPullRequestDialogHost } from "./pullRequest/LinkPullRequestDialog";
 import { ThreadPullRequestsPanel } from "./pullRequest/ThreadPullRequestsPanel";
 import { useDeviceState } from "~/state/device";
@@ -5431,7 +5434,6 @@ export default function ChatView(props: ChatViewProps) {
     activeThread?.environmentId ?? null,
     activeThread?.projectId ?? null,
   );
-  // LangSmith pushes its entry after Sentry.
   const issueTrackerActions = useMemo<ReadonlyArray<IssueTrackerPanelAction>>(() => {
     if (!isElectron || activeThreadRef === null) return [];
     const actions: IssueTrackerPanelAction[] = [];
@@ -5451,8 +5453,16 @@ export default function ChatView(props: ChatViewProps) {
         onClick: () => useRightPanelStore.getState().open(activeThreadRef, "sentry-issues"),
       });
     }
+    if (issueTrackers.langsmith) {
+      actions.push({
+        key: "langsmith",
+        label: "LangSmith runs",
+        shortcut: "R",
+        onClick: () => useRightPanelStore.getState().open(activeThreadRef, "langsmith-runs"),
+      });
+    }
     return actions;
-  }, [activeThreadRef, issueTrackers.linear, issueTrackers.sentry]);
+  }, [activeThreadRef, issueTrackers.langsmith, issueTrackers.linear, issueTrackers.sentry]);
   const { state: deviceState, loaded: deviceStateLoaded } = useDeviceState(
     activeThreadRef?.environmentId ?? null,
   );
@@ -11035,6 +11045,36 @@ export default function ChatView(props: ChatViewProps) {
           environmentId={activeThread.environmentId}
           projectId={renderedRightPanelSurface.projectId}
           issueId={renderedRightPanelSurface.issueId}
+          threadRef={activeThreadRef}
+          composerDraftTarget={composerDraftTarget}
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "langsmith-runs" && activeThreadRef ? (
+      isElectron ? (
+        <LangSmithRunsPanel
+          environmentId={activeThread.environmentId}
+          projectId={activeThread.projectId}
+          onOpenRun={(target) =>
+            useRightPanelStore
+              .getState()
+              .openIssueTrackerItem(
+                activeThreadRef,
+                langsmithRunSurface({ projectId: activeThread.projectId, ...target }),
+              )
+          }
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "langsmith-run" && activeThreadRef ? (
+      isElectron ? (
+        <LangSmithRunDetailPanel
+          key={renderedRightPanelSurface.id}
+          environmentId={activeThread.environmentId}
+          projectId={renderedRightPanelSurface.projectId}
+          runId={renderedRightPanelSurface.runId}
           threadRef={activeThreadRef}
           composerDraftTarget={composerDraftTarget}
         />

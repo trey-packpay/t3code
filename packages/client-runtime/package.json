@@ -259,6 +259,10 @@
       "types": "./src/state/issueTrackerScope.ts",
       "default": "./src/state/issueTrackerScope.ts"
     },
+    "./state/langsmith": {
+      "types": "./src/state/langsmith.ts",
+      "default": "./src/state/langsmith.ts"
+    },
     "./state/linear": {
       "types": "./src/state/linear.ts",
       "default": "./src/state/linear.ts"

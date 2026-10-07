@@ -120,6 +120,7 @@ import { searchableSetting } from "./settingsSearch";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { LinearSettingsRows } from "../linear/LinearSettingsRows";
 import { SentrySettingsRows } from "../sentry/SentrySettingsRows";
+import { LangSmithSettingsRows } from "../langsmith/LangSmithSettingsRows";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { BrowserImportWizard, type WizardTarget } from "./BrowserImportWizard";
 import type { ImportOutcome } from "./browserImportWizard.logic";
@@ -1518,7 +1519,7 @@ function BrowserProfilesSetting({ disabled }: { readonly disabled: boolean }) {
   );
 }
 
-/** Issue tracker credentials and project scopes (desktop only). LangSmith adds its rows here. */
+/** Issue tracker credentials and project scopes (desktop only). */
 function IssueTrackersSettingsSection() {
   const { environment } = useSettingsScope();
   const environmentId =
@@ -1528,6 +1529,7 @@ function IssueTrackersSettingsSection() {
     <SettingsSection id="issue-trackers" title="Issue trackers">
       <LinearSettingsRows key={environmentId} environmentId={environmentId} />
       <SentrySettingsRows key={`sentry:${environmentId}`} environmentId={environmentId} />
+      <LangSmithSettingsRows key={`langsmith:${environmentId}`} environmentId={environmentId} />
     </SettingsSection>
   );
 }

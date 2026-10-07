@@ -1981,7 +1981,7 @@ function OpenCommandPaletteDialog(props: {
 
   if (activeThread !== null) {
     const thread = activeThread;
-    // Issue tracker entries do not depend on pull request support. LangSmith follows Sentry.
+    // Issue tracker entries do not depend on pull request support.
     const issueThreadRef = scopeThreadRef(thread.environmentId, thread.id);
     if (issueTrackers.linear) {
       const LinearGlyph = ISSUE_TRACKER_ICONS.linear;
@@ -2006,6 +2006,19 @@ function OpenCommandPaletteDialog(props: {
         icon: <SentryGlyph className={ITEM_ICON_CLASS} />,
         run: async () => {
           useRightPanelStore.getState().open(issueThreadRef, "sentry-issues");
+        },
+      });
+    }
+    if (issueTrackers.langsmith) {
+      const LangSmithGlyph = ISSUE_TRACKER_ICONS.langsmith;
+      actionItems.push({
+        kind: "action",
+        value: "action:open-langsmith-runs",
+        searchTerms: ["langsmith", "langchain", "traces", "runs", "failed", "llm"],
+        title: "Show failed LangSmith runs",
+        icon: <LangSmithGlyph className={ITEM_ICON_CLASS} />,
+        run: async () => {
+          useRightPanelStore.getState().open(issueThreadRef, "langsmith-runs");
         },
       });
     }
