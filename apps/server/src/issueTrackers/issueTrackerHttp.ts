@@ -4,8 +4,12 @@ import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 import { IssueTrackerErrorReason } from "@t3tools/contracts";
 
 const REQUEST_TIMEOUT = "20 seconds";
-const ERROR_BODY_MAX_CHARS = 300;
+export const ERROR_BODY_MAX_CHARS = 300;
 const AUTH_FAILURE_PATTERN = /authenticat|unauthori[sz]ed|invalid (api )?(key|token)/i;
+const HEADER_SAFE = /^[\x21-\x7e]+$/u;
+
+/** Visible ASCII only; empty keys and redacted settings markers are unusable headers. */
+export const isHeaderSafeToken = (token: string): boolean => HEADER_SAFE.test(token);
 
 /** A failed issue tracker request, classified; each service maps it to `IssueTrackerError`. */
 export class IssueTrackerHttpFailure extends Schema.TaggedError<IssueTrackerHttpFailure>()(
@@ -16,14 +20,22 @@ export class IssueTrackerHttpFailure extends Schema.TaggedError<IssueTrackerHttp
   },
 ) {}
 
-const reasonFor = (status: number, body: string): IssueTrackerErrorReason => {
+/** Classifies an upstream error body or message, including GraphQL error codes. */
+export const classifyIssueTrackerError = (
+  body: string,
+  status?: number,
+): IssueTrackerErrorReason => {
   if (status === 401 || status === 403) return "unauthorized";
   if (status === 429) return "rate-limited";
   if (status === 404) return "not-found";
-  // Linear answers a bad key with HTTP 400 and a GraphQL error.
-  if (status === 400 && AUTH_FAILURE_PATTERN.test(body)) return "unauthorized";
+  if (AUTH_FAILURE_PATTERN.test(body)) return "unauthorized";
+  if (/rate ?limit/i.test(body)) return "rate-limited";
+  if (/entity not found/i.test(body)) return "not-found";
   return "upstream";
 };
+
+const reasonFor = (status: number, body: string): IssueTrackerErrorReason =>
+  classifyIssueTrackerError(body, status);
 
 const classify = <S extends Schema.Top>(
   response: HttpClientResponse.HttpClientResponse,
@@ -66,15 +78,16 @@ export const executeJson = <S extends Schema.Top>(
       ),
     )
     .pipe(
-      Effect.timeout(REQUEST_TIMEOUT),
-      Effect.mapError(
-        () =>
-          new IssueTrackerHttpFailure({
-            reason: "upstream",
-            upstreamMessage: "Could not reach the service.",
-          }),
-      ),
       Effect.flatMap((response) => classify(response, schema)),
+      Effect.timeout(REQUEST_TIMEOUT),
+      Effect.mapError((error) =>
+        error._tag === "IssueTrackerHttpFailure"
+          ? error
+          : new IssueTrackerHttpFailure({
+              reason: "upstream",
+              upstreamMessage: "Could not reach the service.",
+            }),
+      ),
       // Request URLs can carry search terms; keep them out of client spans.
       Effect.provideService(HttpClient.TracerDisabledWhen, () => true),
     );

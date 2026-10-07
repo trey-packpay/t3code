@@ -16,7 +16,13 @@ import {
 } from "@t3tools/contracts";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 
-import { executeJson, type IssueTrackerHttpFailure } from "../issueTrackers/issueTrackerHttp.ts";
+import {
+  classifyIssueTrackerError,
+  ERROR_BODY_MAX_CHARS,
+  executeJson,
+  isHeaderSafeToken,
+  type IssueTrackerHttpFailure,
+} from "../issueTrackers/issueTrackerHttp.ts";
 import * as ServerSettings from "../serverSettings.ts";
 
 const LINEAR_GRAPHQL_URL = "https://api.linear.app/graphql";
@@ -63,7 +69,14 @@ const TEAMS_QUERY = `query Teams { viewer { name } teams(first: 100) { nodes { i
 const envelope = <S extends Schema.Top>(data: S) =>
   Schema.Struct({
     data: Schema.optional(Schema.NullOr(data)),
-    errors: Schema.optional(Schema.Array(Schema.Struct({ message: Schema.String }))),
+    errors: Schema.optional(
+      Schema.Array(
+        Schema.Struct({
+          message: Schema.String,
+          extensions: Schema.optional(Schema.Struct({ code: Schema.optional(Schema.String) })),
+        }),
+      ),
+    ),
   });
 
 const IssuesData = Schema.Struct({
@@ -128,7 +141,7 @@ const make = Effect.gen(function* () {
 
   const requireApiKey = readSettings.pipe(
     Effect.flatMap((settings) =>
-      settings.linear.apiKey.length > 0
+      isHeaderSafeToken(settings.linear.apiKey)
         ? Effect.succeed({ settings, apiKey: settings.linear.apiKey })
         : Effect.fail(fail("not-configured")),
     ),
@@ -155,8 +168,8 @@ const make = Effect.gen(function* () {
         if (first !== undefined) {
           return Effect.fail(
             fail(
-              /authenticat/i.test(first.message) ? "unauthorized" : "upstream",
-              first.message.slice(0, 300),
+              classifyIssueTrackerError(`${first.message} ${first.extensions?.code ?? ""}`),
+              first.message.slice(0, ERROR_BODY_MAX_CHARS),
             ),
           );
         }
