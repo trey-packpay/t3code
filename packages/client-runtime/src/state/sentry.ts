@@ -14,19 +14,13 @@ export function createSentryEnvironmentAtoms<R, E>(
   runtime: Atom.AtomRuntime<EnvironmentRegistry | Persistence.EnvironmentCacheStore | R, E>,
   options: { readonly settings: IssueTrackerSettingsAtom },
 ) {
-  const scope = createIssueTrackerScopeSignal(
-    "environment-data:sentry:scope",
-    options.settings,
-    (settings, projectId) => [
-      settings.sentry.authToken.length > 0,
-      // Plain values, unlike the redacted token, so switching organization or host refetches.
-      settings.sentry.organization,
-      settings.sentry.baseUrl,
-      projectId === null
-        ? null
-        : resolveProjectSettings(settings, projectId).settings.sentryProjects,
-    ],
-  );
+  const scope = createIssueTrackerScopeSignal("sentry", options.settings, (settings, projectId) => [
+    settings.sentry.authToken.length > 0,
+    // Plain values, unlike the redacted token, so switching organization or host refetches.
+    settings.sentry.organization,
+    settings.sentry.baseUrl,
+    projectId === null ? null : resolveProjectSettings(settings, projectId).settings.sentryProjects,
+  ]);
   return {
     scope,
     projects: createEnvironmentRpcQueryAtomFamily(runtime, {

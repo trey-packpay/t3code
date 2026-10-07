@@ -19,7 +19,7 @@ export function LinearSettingsRows(props: { readonly environmentId: EnvironmentI
   const isSaved = saved.apiKey.length > 0;
   const credential = useIssueTrackerCredential({
     environmentId: props.environmentId,
-    label: "Linear",
+    source: "linear",
     isSaved,
     scopes: linearEnvironment.teams({ environmentId: props.environmentId, input: {} }),
     connectedLabel: (teams) => `Connected as ${teams.viewerName}`,

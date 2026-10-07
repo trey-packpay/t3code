@@ -22,7 +22,7 @@ export function SentrySettingsRows(props: { readonly environmentId: EnvironmentI
   const isSaved = tokenSaved && saved.organization.length > 0;
   const credential = useIssueTrackerCredential({
     environmentId: props.environmentId,
-    label: "Sentry",
+    source: "sentry",
     isSaved,
     scopes: sentryEnvironment.projects({ environmentId: props.environmentId, input: {} }),
     connectedLabel: (result) => `Connected to ${result.organization}`,

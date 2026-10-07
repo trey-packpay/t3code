@@ -255,6 +255,10 @@
       "types": "./src/state/shell.ts",
       "default": "./src/state/shell.ts"
     },
+    "./state/issue-tracker-scope": {
+      "types": "./src/state/issueTrackerScope.ts",
+      "default": "./src/state/issueTrackerScope.ts"
+    },
     "./state/linear": {
       "types": "./src/state/linear.ts",
       "default": "./src/state/linear.ts"

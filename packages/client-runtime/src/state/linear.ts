@@ -14,16 +14,10 @@ export function createLinearEnvironmentAtoms<R, E>(
   runtime: Atom.AtomRuntime<EnvironmentRegistry | Persistence.EnvironmentCacheStore | R, E>,
   options: { readonly settings: IssueTrackerSettingsAtom },
 ) {
-  const scope = createIssueTrackerScopeSignal(
-    "environment-data:linear:scope",
-    options.settings,
-    (settings, projectId) => [
-      settings.linear.apiKey.length > 0,
-      projectId === null
-        ? null
-        : resolveProjectSettings(settings, projectId).settings.linearTeamIds,
-    ],
-  );
+  const scope = createIssueTrackerScopeSignal("linear", options.settings, (settings, projectId) => [
+    settings.linear.apiKey.length > 0,
+    projectId === null ? null : resolveProjectSettings(settings, projectId).settings.linearTeamIds,
+  ]);
   return {
     scope,
     teams: createEnvironmentRpcQueryAtomFamily(runtime, {

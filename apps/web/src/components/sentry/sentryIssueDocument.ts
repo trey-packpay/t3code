@@ -1,6 +1,8 @@
 import type { SentryIssueDetail } from "@t3tools/contracts";
 
-import type { IssueDocument } from "../issues/issueContext";
+import { formatReviewCommentFence } from "~/reviewCommentContext";
+
+import { type IssueDocument, markdownInlineCode } from "../issues/issueContext";
 
 function stackTraceMarkdown(detail: SentryIssueDetail): string {
   if (detail.exceptions.length === 0) return "";
@@ -16,7 +18,7 @@ function stackTraceMarkdown(detail: SentryIssueDetail): string {
           return context.length > 0 ? `${head}\n${context}` : head;
         })
         .join("\n");
-      return `### ${exception.type}: ${exception.value}\n\n\`\`\`\n${frames}\n\`\`\``;
+      return `### ${exception.type}: ${exception.value}\n\n${formatReviewCommentFence("", frames)}`;
     })
     .join("\n\n");
 }
@@ -30,27 +32,32 @@ export function sentryIssueDocument(detail: SentryIssueDetail): IssueDocument {
     `**Project:** ${detail.projectSlug}`,
     detail.release ? `**Release:** ${detail.release}` : null,
     detail.environment ? `**Environment:** ${detail.environment}` : null,
-    detail.culprit ? `**Culprit:** \`${detail.culprit}\`` : null,
+    detail.culprit ? `**Culprit:** ${markdownInlineCode(detail.culprit)}` : null,
   ].filter((line): line is string => line !== null);
   const headline = detail.exceptions[0];
   const summary = [
     meta.join("  \n"),
     headline
-      ? `## Error\n\n\`${headline.type}: ${headline.value}\``
+      ? `## Error\n\n${markdownInlineCode(`${headline.type}: ${headline.value}`)}`
       : "## Error\n\n_No exception data on the latest event._",
   ].join("\n\n");
   const tags =
     detail.tags.length === 0
       ? ""
-      : `## Tags\n\n${detail.tags.map((tag) => `- \`${tag.key}\`: ${tag.value}`).join("\n")}`;
+      : `## Tags\n\n${detail.tags
+          .map((tag) => `- ${markdownInlineCode(tag.key)}: ${markdownInlineCode(tag.value)}`)
+          .join("\n")}`;
   const breadcrumbs =
     detail.breadcrumbs.length === 0
       ? ""
-      : `## Breadcrumbs (latest ${detail.breadcrumbs.length})\n\n\`\`\`\n${detail.breadcrumbs
-          .map((crumb) =>
-            `${crumb.timestamp ?? ""} [${crumb.level ?? "info"}] ${crumb.category ?? ""} ${crumb.message ?? ""}`.trim(),
-          )
-          .join("\n")}\n\`\`\``;
+      : `## Breadcrumbs (latest ${detail.breadcrumbs.length})\n\n${formatReviewCommentFence(
+          "",
+          detail.breadcrumbs
+            .map((crumb) =>
+              `${crumb.timestamp ?? ""} [${crumb.level ?? "info"}] ${crumb.category ?? ""} ${crumb.message ?? ""}`.trim(),
+            )
+            .join("\n"),
+        )}`;
   const stack = stackTraceMarkdown(detail);
   const body = [
     stack.length > 0 ? `## Stack trace (latest event)\n\n${stack}` : "",

@@ -21,6 +21,22 @@ export function clampText(value: string, max: number): string {
   return `${value.slice(0, max - TRUNCATED_MARKER.length)}${TRUNCATED_MARKER}`;
 }
 
+/**
+ * `text` as markdown inline code. The backtick run is longer than any inside `text`, and line
+ * breaks become spaces (as inline code renders them anyway) so a blank line cannot end the span.
+ * Fenced blocks use `formatReviewCommentFence`, which sizes its fence the same way.
+ */
+export function markdownInlineCode(text: string): string {
+  const flat = text.replace(/\s*[\r\n]+\s*/g, " ");
+  if (flat.length === 0) return "";
+  let longestRun = 0;
+  for (const match of flat.matchAll(/`+/g)) longestRun = Math.max(longestRun, match[0].length);
+  const ticks = "`".repeat(longestRun + 1);
+  // Renderers strip one padding space, which keeps an edge backtick off the delimiter.
+  const pad = flat.startsWith("`") || flat.endsWith("`") ? " " : "";
+  return `${ticks}${pad}${flat}${pad}${ticks}`;
+}
+
 /** One issue rendered as markdown: `summary` is what a reader needs first, `body` the long tail. */
 export interface IssueDocument {
   readonly source: IssueTrackerSource;
