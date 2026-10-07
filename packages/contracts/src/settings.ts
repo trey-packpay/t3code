@@ -1019,6 +1019,42 @@ export const BitbucketSettings = Schema.Struct({
 export type BitbucketSettings = typeof BitbucketSettings.Type;
 
 /**
+ * Issue tracker credentials for this environment. Tokens live in the server's secret store;
+ * settings and clients only see a redaction marker when one is set.
+ */
+export const LinearSettings = Schema.Struct({
+  apiKey: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+});
+export type LinearSettings = typeof LinearSettings.Type;
+
+export const SentrySettings = Schema.Struct({
+  authToken: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  organization: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  /** Empty means https://sentry.io. */
+  baseUrl: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+});
+export type SentrySettings = typeof SentrySettings.Type;
+
+export const LangSmithSettings = Schema.Struct({
+  apiKey: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  /** Empty means https://api.smith.langchain.com. */
+  endpoint: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+});
+export type LangSmithSettings = typeof LangSmithSettings.Type;
+
+export const SentryProjectRef = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  slug: TrimmedNonEmptyString,
+});
+export type SentryProjectRef = typeof SentryProjectRef.Type;
+
+export const LangSmithProjectRef = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  name: TrimmedNonEmptyString,
+});
+export type LangSmithProjectRef = typeof LangSmithProjectRef.Type;
+
+/**
  * Per-host choices for the GitHub CLI's logins. `account` pins one of the logins
  * `gh` holds for the host instead of its active one; a disabled host gets no
  * credential at all. A token saved here wins over `GH_TOKEN` and friends, which win over `gh`.
@@ -1182,6 +1218,9 @@ export const PROJECT_SCOPED_SERVER_SETTING_KEYS = [
   "sidebarAutoSettleAfterDays",
   "continueThreadsAfterServerUpdate",
   "responseStreamingMode",
+  "linearTeamIds",
+  "sentryProjects",
+  "langsmithProjects",
 ] as const;
 export type ProjectScopedServerSettingKey = (typeof PROJECT_SCOPED_SERVER_SETTING_KEYS)[number];
 
@@ -1213,6 +1252,9 @@ export const ProjectSettingsOverrides = Schema.Struct({
   sidebarAutoSettleAfterDays: Schema.optionalKey(Schema.NullOr(SidebarAutoSettleAfterDays)),
   continueThreadsAfterServerUpdate: Schema.optionalKey(Schema.Boolean),
   responseStreamingMode: Schema.optionalKey(ResponseStreamingMode),
+  linearTeamIds: Schema.optionalKey(Schema.Array(TrimmedNonEmptyString)),
+  sentryProjects: Schema.optionalKey(Schema.Array(SentryProjectRef)),
+  langsmithProjects: Schema.optionalKey(Schema.Array(LangSmithProjectRef)),
 } satisfies Record<ProjectScopedServerSettingKey, unknown>);
 export type ProjectSettingsOverrides = typeof ProjectSettingsOverrides.Type;
 
@@ -1459,6 +1501,18 @@ export const ServerSettings = Schema.Struct({
   ),
   observability: ObservabilitySettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
   bitbucket: BitbucketSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+  linear: LinearSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+  sentry: SentrySettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+  langsmith: LangSmithSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+  linearTeamIds: Schema.Array(TrimmedNonEmptyString).pipe(
+    Schema.withDecodingDefault(Effect.succeed([])),
+  ),
+  sentryProjects: Schema.Array(SentryProjectRef).pipe(
+    Schema.withDecodingDefault(Effect.succeed([])),
+  ),
+  langsmithProjects: Schema.Array(LangSmithProjectRef).pipe(
+    Schema.withDecodingDefault(Effect.succeed([])),
+  ),
   github: GitHubSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
   // Keyed by a user-chosen id so a source keeps its rows across edits. Entries
   // this build cannot decode round-trip untouched, as provider instances do.
@@ -1751,6 +1805,24 @@ export const ServerSettingsPatch = Schema.Struct({
       apiToken: Schema.optionalKey(TrimmedString),
     }),
   ),
+  /** An empty token clears it; an omitted one keeps what the server has. */
+  linear: Schema.optionalKey(Schema.Struct({ apiKey: Schema.optionalKey(TrimmedString) })),
+  sentry: Schema.optionalKey(
+    Schema.Struct({
+      authToken: Schema.optionalKey(TrimmedString),
+      organization: Schema.optionalKey(TrimmedString),
+      baseUrl: Schema.optionalKey(TrimmedString),
+    }),
+  ),
+  langsmith: Schema.optionalKey(
+    Schema.Struct({
+      apiKey: Schema.optionalKey(TrimmedString),
+      endpoint: Schema.optionalKey(TrimmedString),
+    }),
+  ),
+  linearTeamIds: Schema.optionalKey(Schema.Array(TrimmedNonEmptyString)),
+  sentryProjects: Schema.optionalKey(Schema.Array(SentryProjectRef)),
+  langsmithProjects: Schema.optionalKey(Schema.Array(LangSmithProjectRef)),
   /**
    * `hosts` replaces the whole map, so an omitted host or account clears it. `tokens` merges per
    * host: an empty token removes that host's token, the redaction marker keeps it.

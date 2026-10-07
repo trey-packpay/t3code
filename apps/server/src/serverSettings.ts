@@ -161,6 +161,30 @@ const BITBUCKET_SECRET_NAMES = {
 } as const;
 const BITBUCKET_SECRET_FIELDS = ["accessToken", "apiToken"] as const;
 
+/** Issue tracker tokens, stored like the Bitbucket ones: marker on disk, value in the secret store. */
+interface IssueTrackerSecret {
+  readonly secretName: string;
+  readonly read: (settings: ServerSettings) => string;
+  readonly write: (settings: ServerSettings, value: string) => ServerSettings;
+}
+const ISSUE_TRACKER_SECRETS: ReadonlyArray<IssueTrackerSecret> = [
+  {
+    secretName: "linear-api-key",
+    read: (settings) => settings.linear.apiKey,
+    write: (settings, apiKey) => ({ ...settings, linear: { ...settings.linear, apiKey } }),
+  },
+  {
+    secretName: "sentry-auth-token",
+    read: (settings) => settings.sentry.authToken,
+    write: (settings, authToken) => ({ ...settings, sentry: { ...settings.sentry, authToken } }),
+  },
+  {
+    secretName: "langsmith-api-key",
+    read: (settings) => settings.langsmith.apiKey,
+    write: (settings, apiKey) => ({ ...settings, langsmith: { ...settings.langsmith, apiKey } }),
+  },
+];
+
 /** Hosts are case-insensitive; a patch can arrive before decoding lowercased its keys. */
 function gitHubTokenSecretName(host: string): string {
   return `github-token-${Buffer.from(host.trim().toLowerCase(), "utf8").toString("base64url")}`;
@@ -215,7 +239,10 @@ export function redactServerSettingsForClient(settings: ServerSettings): ServerS
       Object.entries(settings.github.tokens).map(([host, token]) => [host, redactSecret(token)]),
     ),
   };
-  return { ...settings, providerInstances, usageLimitSources, bitbucket, github };
+  return ISSUE_TRACKER_SECRETS.reduce(
+    (redacted, entry) => entry.write(redacted, redactSecret(entry.read(redacted))),
+    { ...settings, providerInstances, usageLimitSources, bitbucket, github } as ServerSettings,
+  );
 }
 
 export function applyProviderInstanceMutation(
@@ -735,7 +762,24 @@ const make = Effect.gen(function* () {
         tokens[host] = SECRET_REDACTED;
         moved = true;
       }
-      return moved ? { ...settings, bitbucket, github: { ...settings.github, tokens } } : settings;
+      let result = moved
+        ? { ...settings, bitbucket, github: { ...settings.github, tokens } }
+        : settings;
+      for (const entry of ISSUE_TRACKER_SECRETS) {
+        const value = entry.read(result);
+        if (value.length === 0 || value === SECRET_REDACTED) continue;
+        const stored = yield* secretStore.set(entry.secretName, textEncoder.encode(value)).pipe(
+          Effect.as(true),
+          Effect.catch(() =>
+            Effect.logWarning("failed to move an issue tracker token into the secret store", {
+              secretName: entry.secretName,
+            }).pipe(Effect.as(false)),
+          ),
+        );
+        if (!stored) continue;
+        result = entry.write(result, SECRET_REDACTED);
+      }
+      return result;
     });
 
   const loadSettingsFromDisk = Effect.gen(function* () {
@@ -925,13 +969,28 @@ const make = Effect.gen(function* () {
           );
         tokens[host] = Option.isSome(secret) ? textDecoder.decode(secret.value) : "";
       }
-      return {
+      let materialized: ServerSettings = {
         ...settings,
         providerInstances: providerInstances as ServerSettings["providerInstances"],
         usageLimitSources: usageLimitSources as ServerSettings["usageLimitSources"],
         bitbucket,
         github: { ...settings.github, tokens },
       };
+      for (const entry of ISSUE_TRACKER_SECRETS) {
+        if (entry.read(materialized) !== SECRET_REDACTED) continue;
+        const secret = yield* secretStore
+          .get(entry.secretName)
+          .pipe(
+            Effect.mapError(
+              (cause) => new ServerSettingsError({ settingsPath, operation: "read-secret", cause }),
+            ),
+          );
+        materialized = entry.write(
+          materialized,
+          Option.isSome(secret) ? textDecoder.decode(secret.value) : "",
+        );
+      }
+      return materialized;
     });
 
   const materializeChanges = (changes: Stream.Stream<ServerSettings>) =>
@@ -1124,14 +1183,38 @@ const make = Effect.gen(function* () {
         });
       }
 
+      let persisted: ServerSettings = {
+        ...next,
+        providerInstances: providerInstances as ServerSettings["providerInstances"],
+        usageLimitSources: usageLimitSources as ServerSettings["usageLimitSources"],
+        bitbucket,
+        github: { ...next.github, tokens },
+      };
+      for (const entry of ISSUE_TRACKER_SECRETS) {
+        let value = entry.read(next);
+        if (value === SECRET_REDACTED) {
+          // The marker keeps what is saved; a hand-edited plaintext value moves into the store.
+          const inline = entry.read(current);
+          if (inline === SECRET_REDACTED || inline.length === 0) continue;
+          value = inline;
+        }
+        if (value.length === 0) {
+          changes.push({
+            kind: "remove",
+            secretName: entry.secretName,
+            operation: "remove-secret",
+          });
+          continue;
+        }
+        changes.push({
+          kind: "write",
+          secretName: entry.secretName,
+          value: textEncoder.encode(value),
+        });
+        persisted = entry.write(persisted, SECRET_REDACTED);
+      }
       return {
-        settings: {
-          ...next,
-          providerInstances: providerInstances as ServerSettings["providerInstances"],
-          usageLimitSources: usageLimitSources as ServerSettings["usageLimitSources"],
-          bitbucket,
-          github: { ...next.github, tokens },
-        },
+        settings: persisted,
         changes,
       };
     });
