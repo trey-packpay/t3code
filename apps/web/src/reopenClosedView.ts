@@ -144,6 +144,7 @@ export async function reopenClosedView(
       panels.openPullRequest(ref, surface);
       break;
     case "linear-issue":
+    case "sentry-issue":
       panels.openIssueTrackerItem(ref, surface);
       break;
     default:

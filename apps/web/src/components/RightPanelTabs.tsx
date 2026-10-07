@@ -96,6 +96,8 @@ export interface IssueTrackerPanelAction {
 }
 
 const NO_ISSUE_TRACKER_ACTIONS: ReadonlyArray<IssueTrackerPanelAction> = [];
+const LinearGlyph = ISSUE_TRACKER_ICONS.linear;
+const SentryGlyph = ISSUE_TRACKER_ICONS.sentry;
 
 function issueTrackerSurfaceActions(actions: ReadonlyArray<IssueTrackerPanelAction>) {
   return actions.map((action) => ({
@@ -637,6 +639,10 @@ function surfaceTitle(
       return "Linear";
     case "linear-issue":
       return surface.identifier;
+    case "sentry-issues":
+      return "Sentry";
+    case "sentry-issue":
+      return surface.shortId;
     case "preview": {
       const snapshot = surface.resourceId ? sessions[surface.resourceId] : null;
       if (!snapshot || snapshot.navStatus._tag === "Idle") return "Browser";
@@ -727,10 +733,11 @@ function SurfaceIcon({
         <Smartphone className="size-3 shrink-0" />
       );
     case "linear-issues":
-    case "linear-issue": {
-      const LinearGlyph = ISSUE_TRACKER_ICONS.linear;
+    case "linear-issue":
       return <LinearGlyph className="size-3 shrink-0" />;
-    }
+    case "sentry-issues":
+    case "sentry-issue":
+      return <SentryGlyph className="size-3 shrink-0" />;
   }
 }
 

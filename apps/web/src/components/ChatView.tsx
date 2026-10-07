@@ -249,6 +249,7 @@ import { PopoverCreateHandle } from "./ui/popover";
 import {
   linearIssueSurface,
   pullRequestSurface,
+  sentryIssueSurface,
   selectActiveRightPanel,
   selectActiveRightPanelSurface,
   selectThreadPanelOpen,
@@ -289,6 +290,8 @@ import { IssueTrackerDesktopOnlyState } from "./issues/IssuePanelChrome";
 import { useIssueTrackerAvailability } from "./issues/useIssueTrackerAvailability";
 import { LinearIssueDetailPanel } from "./linear/LinearIssueDetailPanel";
 import { LinearIssuesPanel } from "./linear/LinearIssuesPanel";
+import { SentryIssueDetailPanel } from "./sentry/SentryIssueDetailPanel";
+import { SentryIssuesPanel } from "./sentry/SentryIssuesPanel";
 import { LinkPullRequestDialogHost } from "./pullRequest/LinkPullRequestDialog";
 import { ThreadPullRequestsPanel } from "./pullRequest/ThreadPullRequestsPanel";
 import { useDeviceState } from "~/state/device";
@@ -5428,7 +5431,7 @@ export default function ChatView(props: ChatViewProps) {
     activeThread?.environmentId ?? null,
     activeThread?.projectId ?? null,
   );
-  // Sentry and LangSmith push their entries here, in this order.
+  // LangSmith pushes its entry after Sentry.
   const issueTrackerActions = useMemo<ReadonlyArray<IssueTrackerPanelAction>>(() => {
     if (!isElectron || activeThreadRef === null) return [];
     const actions: IssueTrackerPanelAction[] = [];
@@ -5440,8 +5443,16 @@ export default function ChatView(props: ChatViewProps) {
         onClick: () => useRightPanelStore.getState().open(activeThreadRef, "linear-issues"),
       });
     }
+    if (issueTrackers.sentry) {
+      actions.push({
+        key: "sentry",
+        label: "Sentry issues",
+        shortcut: "S",
+        onClick: () => useRightPanelStore.getState().open(activeThreadRef, "sentry-issues"),
+      });
+    }
     return actions;
-  }, [activeThreadRef, issueTrackers.linear]);
+  }, [activeThreadRef, issueTrackers.linear, issueTrackers.sentry]);
   const { state: deviceState, loaded: deviceStateLoaded } = useDeviceState(
     activeThreadRef?.environmentId ?? null,
   );
@@ -10994,6 +11005,36 @@ export default function ChatView(props: ChatViewProps) {
           environmentId={activeThread.environmentId}
           projectId={renderedRightPanelSurface.projectId}
           identifier={renderedRightPanelSurface.identifier}
+          threadRef={activeThreadRef}
+          composerDraftTarget={composerDraftTarget}
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "sentry-issues" && activeThreadRef ? (
+      isElectron ? (
+        <SentryIssuesPanel
+          environmentId={activeThread.environmentId}
+          projectId={activeThread.projectId}
+          onOpenIssue={(target) =>
+            useRightPanelStore
+              .getState()
+              .openIssueTrackerItem(
+                activeThreadRef,
+                sentryIssueSurface({ projectId: activeThread.projectId, ...target }),
+              )
+          }
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "sentry-issue" && activeThreadRef ? (
+      isElectron ? (
+        <SentryIssueDetailPanel
+          key={renderedRightPanelSurface.id}
+          environmentId={activeThread.environmentId}
+          projectId={renderedRightPanelSurface.projectId}
+          issueId={renderedRightPanelSurface.issueId}
           threadRef={activeThreadRef}
           composerDraftTarget={composerDraftTarget}
         />

@@ -1981,7 +1981,7 @@ function OpenCommandPaletteDialog(props: {
 
   if (activeThread !== null) {
     const thread = activeThread;
-    // Issue tracker entries do not depend on pull request support. Sentry and LangSmith follow Linear.
+    // Issue tracker entries do not depend on pull request support. LangSmith follows Sentry.
     const issueThreadRef = scopeThreadRef(thread.environmentId, thread.id);
     if (issueTrackers.linear) {
       const LinearGlyph = ISSUE_TRACKER_ICONS.linear;
@@ -1993,6 +1993,19 @@ function OpenCommandPaletteDialog(props: {
         icon: <LinearGlyph className={ITEM_ICON_CLASS} />,
         run: async () => {
           useRightPanelStore.getState().open(issueThreadRef, "linear-issues");
+        },
+      });
+    }
+    if (issueTrackers.sentry) {
+      const SentryGlyph = ISSUE_TRACKER_ICONS.sentry;
+      actionItems.push({
+        kind: "action",
+        value: "action:open-sentry-issues",
+        searchTerms: ["sentry", "errors", "crashes", "exceptions", "issues"],
+        title: "Show Sentry issues",
+        icon: <SentryGlyph className={ITEM_ICON_CLASS} />,
+        run: async () => {
+          useRightPanelStore.getState().open(issueThreadRef, "sentry-issues");
         },
       });
     }

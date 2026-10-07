@@ -1,4 +1,5 @@
 import type { EnvironmentId, IssueTrackerSource } from "@t3tools/contracts";
+import { useAtomValue } from "@effect/atom-react";
 import type { AsyncResult, Atom } from "effect/reactivity";
 import { type ReactNode, useState } from "react";
 
@@ -41,29 +42,39 @@ export interface IssuePages<Input extends CursorInput, Page extends CursorPage, 
 
 const NO_CURSORS: ReadonlyArray<string> = [];
 
-/** The first page of a tracker list plus the pages "Load more" adds. A new input starts over. */
+/**
+ * The first page of a tracker list plus the pages "Load more" adds. A new input or a new `scope`
+ * (the tracker's settings signal, e.g. `linearEnvironment.scope(environmentId, projectId)`)
+ * starts over: the first page refetches on a scope change, so cursors from before it are stale.
+ */
 export function useIssuePages<Input extends CursorInput, Page extends CursorPage, E>(
   query: IssuePageQuery<Input, Page, E>,
   environmentId: EnvironmentId,
   input: Input,
+  scope: Atom.Atom<unknown>,
 ): IssuePages<Input, Page, E> {
   const firstAtom = query({ environmentId, input });
   const firstPage = useEnvironmentQuery(firstAtom);
-  // Later pages belong to the first page's query; the family returns one atom per input.
+  const scopeValue = useAtomValue(scope);
+  // Later pages belong to the first page's query (the family returns one atom per input) under
+  // the scope they were loaded in.
   const [more, setMore] = useState<{
     readonly list: Atom.Atom<unknown> | null;
+    readonly scope: unknown;
     readonly cursors: ReadonlyArray<string>;
-  }>({ list: null, cursors: NO_CURSORS });
-  const cursors = more.list === firstAtom ? more.cursors : NO_CURSORS;
+  }>({ list: null, scope: null, cursors: NO_CURSORS });
+  const cursors =
+    more.list === firstAtom && Object.is(more.scope, scopeValue) ? more.cursors : NO_CURSORS;
   return {
     environmentId,
     query,
     input,
     firstPage,
     cursors,
-    loadMore: (cursor) => setMore({ list: firstAtom, cursors: [...cursors, cursor] }),
+    loadMore: (cursor) =>
+      setMore({ list: firstAtom, scope: scopeValue, cursors: [...cursors, cursor] }),
     refresh: () => {
-      setMore({ list: firstAtom, cursors: NO_CURSORS });
+      setMore({ list: firstAtom, scope: scopeValue, cursors: NO_CURSORS });
       firstPage.refresh();
     },
     refreshing: firstPage.isPending,

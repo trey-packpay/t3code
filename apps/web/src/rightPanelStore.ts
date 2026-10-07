@@ -32,6 +32,8 @@ const RIGHT_PANEL_KINDS = [
   "pull-requests",
   "linear-issues",
   "linear-issue",
+  "sentry-issues",
+  "sentry-issue",
 ] as const;
 export type RightPanelKind = (typeof RIGHT_PANEL_KINDS)[number];
 
@@ -96,6 +98,16 @@ export type RightPanelSurface =
       kind: "linear-issue";
       projectId: ProjectId;
       identifier: string;
+    }
+  /** The project's Sentry issues (desktop only). */
+  | { id: "sentry-issues"; kind: "sentry-issues" }
+  /** One Sentry issue, a peer tab like `linear-issue`. */
+  | {
+      id: `sentry-issue:${string}`;
+      kind: "sentry-issue";
+      projectId: ProjectId;
+      issueId: string;
+      shortId: string;
     };
 
 const RIGHT_PANEL_STORAGE_KEY = "t3code:right-panel-state:v2";
@@ -148,7 +160,10 @@ interface RightPanelStoreState {
   ) => boolean;
   open: (
     ref: ScopedThreadRef,
-    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request" | "linear-issue">,
+    kind: Exclude<
+      RightPanelKind,
+      "file" | "terminal" | "pull-request" | "linear-issue" | "sentry-issue"
+    >,
   ) => void;
   openDevice: (ref: ScopedThreadRef, target: DeviceTabTarget, automatic?: boolean) => void;
   renameDevice: (ref: ScopedThreadRef, surfaceId: string, title: string) => void;
@@ -193,7 +208,10 @@ interface RightPanelStoreState {
   toggleVisibility: (ref: ScopedThreadRef) => void;
   toggle: (
     ref: ScopedThreadRef,
-    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request" | "linear-issue">,
+    kind: Exclude<
+      RightPanelKind,
+      "file" | "terminal" | "pull-request" | "linear-issue" | "sentry-issue"
+    >,
   ) => void;
   setThreadPanelOpen: (
     ref: ScopedThreadRef,
@@ -216,7 +234,10 @@ const DEFAULT_THREAD_PANEL_VISIBILITY: ThreadPanelVisibility = {
 };
 
 const singletonSurface = (
-  kind: Exclude<RightPanelKind, "file" | "preview" | "terminal" | "pull-request" | "linear-issue">,
+  kind: Exclude<
+    RightPanelKind,
+    "file" | "preview" | "terminal" | "pull-request" | "linear-issue" | "sentry-issue"
+  >,
 ): RightPanelSurface => {
   switch (kind) {
     case "diff":
@@ -229,6 +250,8 @@ const singletonSurface = (
       return { id: "device", kind };
     case "linear-issues":
       return { id: "linear-issues", kind };
+    case "sentry-issues":
+      return { id: "sentry-issues", kind };
   }
 };
 
@@ -303,8 +326,11 @@ export function pullRequestSurface(target: {
   };
 }
 
-/** A single issue tracker item opened beside a thread. Sentry and LangSmith add their kinds here. */
-export type IssueTrackerItemSurface = Extract<RightPanelSurface, { kind: "linear-issue" }>;
+/** A single issue tracker item opened beside a thread. LangSmith adds its kind here. */
+export type IssueTrackerItemSurface = Extract<
+  RightPanelSurface,
+  { kind: "linear-issue" | "sentry-issue" }
+>;
 
 export function linearIssueSurface(target: {
   projectId: ProjectId;
@@ -315,6 +341,20 @@ export function linearIssueSurface(target: {
     kind: "linear-issue",
     projectId: target.projectId,
     identifier: target.identifier,
+  };
+}
+
+export function sentryIssueSurface(target: {
+  projectId: ProjectId;
+  issueId: string;
+  shortId: string;
+}): Extract<RightPanelSurface, { kind: "sentry-issue" }> {
+  return {
+    id: `sentry-issue:${encodeURIComponent(target.projectId)}:${encodeURIComponent(target.issueId)}`,
+    kind: "sentry-issue",
+    projectId: target.projectId,
+    issueId: target.issueId,
+    shortId: target.shortId,
   };
 }
 

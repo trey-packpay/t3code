@@ -729,6 +729,25 @@ export const SETTINGS_SEARCH_ITEMS = [
     scope: "project-defaults",
   },
   {
+    id: "sentry-credentials",
+    title: "Sentry credentials",
+    to: "/settings/integrations",
+    searchTerms: ["sentry errors auth token organization self-hosted url connect"],
+    desktopOnly: true,
+    environmentOnly: true,
+    scope: "environment-defaults",
+  },
+  {
+    id: "sentry-projects",
+    title: "Sentry projects",
+    to: "/settings/integrations",
+    // The row renders only once a token and organization are saved, so the result lands on the section.
+    targetId: "issue-trackers",
+    searchTerms: ["sentry projects errors project mapping"],
+    desktopOnly: true,
+    scope: "project-defaults",
+  },
+  {
     id: "automatic-pull",
     title: "Automatically pull",
     to: "/settings/source-control",

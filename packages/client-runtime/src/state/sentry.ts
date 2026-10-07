@@ -10,37 +10,40 @@ import { createEnvironmentRpcQueryAtomFamily } from "./runtime.ts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
 import * as Persistence from "../platform/persistence.ts";
 
-export function createLinearEnvironmentAtoms<R, E>(
+export function createSentryEnvironmentAtoms<R, E>(
   runtime: Atom.AtomRuntime<EnvironmentRegistry | Persistence.EnvironmentCacheStore | R, E>,
   options: { readonly settings: IssueTrackerSettingsAtom },
 ) {
   const scope = createIssueTrackerScopeSignal(
-    "environment-data:linear:scope",
+    "environment-data:sentry:scope",
     options.settings,
     (settings, projectId) => [
-      settings.linear.apiKey.length > 0,
+      settings.sentry.authToken.length > 0,
+      // Plain values, unlike the redacted token, so switching organization or host refetches.
+      settings.sentry.organization,
+      settings.sentry.baseUrl,
       projectId === null
         ? null
-        : resolveProjectSettings(settings, projectId).settings.linearTeamIds,
+        : resolveProjectSettings(settings, projectId).settings.sentryProjects,
     ],
   );
   return {
     scope,
-    teams: createEnvironmentRpcQueryAtomFamily(runtime, {
-      label: "environment-data:linear:teams",
-      tag: WS_METHODS.linearListTeams,
+    projects: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:sentry:projects",
+      tag: WS_METHODS.sentryListProjects,
       staleTimeMs: 300_000,
       refreshTrigger: ({ environmentId }) => scope(environmentId, null),
     }),
     issues: createEnvironmentRpcQueryAtomFamily(runtime, {
-      label: "environment-data:linear:issues",
-      tag: WS_METHODS.linearListIssues,
+      label: "environment-data:sentry:issues",
+      tag: WS_METHODS.sentryListIssues,
       staleTimeMs: 30_000,
       refreshTrigger: ({ environmentId, input }) => scope(environmentId, input.projectId),
     }),
     issue: createEnvironmentRpcQueryAtomFamily(runtime, {
-      label: "environment-data:linear:issue",
-      tag: WS_METHODS.linearIssueDetail,
+      label: "environment-data:sentry:issue",
+      tag: WS_METHODS.sentryIssueDetail,
       staleTimeMs: 60_000,
       refreshTrigger: ({ environmentId }) => scope(environmentId, null),
     }),

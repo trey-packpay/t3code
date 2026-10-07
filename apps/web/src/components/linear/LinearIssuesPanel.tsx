@@ -47,7 +47,12 @@ export function LinearIssuesPanel(props: {
     () => ({ projectId: props.projectId, filter, ...(query.length > 0 ? { query } : {}) }),
     [filter, props.projectId, query],
   );
-  const pages = useIssuePages(linearEnvironment.issues, props.environmentId, input);
+  const pages = useIssuePages(
+    linearEnvironment.issues,
+    props.environmentId,
+    input,
+    linearEnvironment.scope(props.environmentId, props.projectId),
+  );
   const scopeLabel = useLinearScopeLabel(props.environmentId, props.projectId);
 
   return (
