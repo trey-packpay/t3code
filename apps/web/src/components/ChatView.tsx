@@ -247,6 +247,7 @@ import {
 } from "../rightPanelLayout";
 import { PopoverCreateHandle } from "./ui/popover";
 import {
+  linearIssueSurface,
   pullRequestSurface,
   selectActiveRightPanel,
   selectActiveRightPanelSurface,
@@ -283,7 +284,11 @@ import {
 import { PullRequestDetailPanel } from "./pullRequest/PullRequestDetailPanel";
 import { PullRequestDetailGhost } from "./pullRequest/PullRequestGhosts";
 import { PullRequestsUnavailableState } from "./pullRequest/PullRequestsUnavailableState";
-import { RightPanelTabs } from "./RightPanelTabs";
+import { type IssueTrackerPanelAction, RightPanelTabs } from "./RightPanelTabs";
+import { IssueTrackerDesktopOnlyState } from "./issues/IssuePanelChrome";
+import { useIssueTrackerAvailability } from "./issues/useIssueTrackerAvailability";
+import { LinearIssueDetailPanel } from "./linear/LinearIssueDetailPanel";
+import { LinearIssuesPanel } from "./linear/LinearIssuesPanel";
 import { LinkPullRequestDialogHost } from "./pullRequest/LinkPullRequestDialog";
 import { ThreadPullRequestsPanel } from "./pullRequest/ThreadPullRequestsPanel";
 import { useDeviceState } from "~/state/device";
@@ -5419,6 +5424,24 @@ export default function ChatView(props: ChatViewProps) {
     if (!activeThreadRef || !pullRequestsSurfaceAvailable) return;
     useRightPanelStore.getState().open(activeThreadRef, "pull-requests");
   }, [activeThreadRef, pullRequestsSurfaceAvailable]);
+  const issueTrackers = useIssueTrackerAvailability(
+    activeThread?.environmentId ?? null,
+    activeThread?.projectId ?? null,
+  );
+  // Sentry and LangSmith push their entries here, in this order.
+  const issueTrackerActions = useMemo<ReadonlyArray<IssueTrackerPanelAction>>(() => {
+    if (!isElectron || activeThreadRef === null) return [];
+    const actions: IssueTrackerPanelAction[] = [];
+    if (issueTrackers.linear) {
+      actions.push({
+        key: "linear",
+        label: "Linear issues",
+        shortcut: "I",
+        onClick: () => useRightPanelStore.getState().open(activeThreadRef, "linear-issues"),
+      });
+    }
+    return actions;
+  }, [activeThreadRef, issueTrackers.linear]);
   const { state: deviceState, loaded: deviceStateLoaded } = useDeviceState(
     activeThreadRef?.environmentId ?? null,
   );
@@ -10947,6 +10970,36 @@ export default function ChatView(props: ChatViewProps) {
       />
     ) : renderedRightPanelSurface?.kind === "pull-requests" && activeThreadRef ? (
       <ThreadPullRequestsPanel threadRef={activeThreadRef} />
+    ) : renderedRightPanelSurface?.kind === "linear-issues" && activeThreadRef ? (
+      isElectron ? (
+        <LinearIssuesPanel
+          environmentId={activeThread.environmentId}
+          projectId={activeThread.projectId}
+          onOpenIssue={(identifier) =>
+            useRightPanelStore
+              .getState()
+              .openIssueTrackerItem(
+                activeThreadRef,
+                linearIssueSurface({ projectId: activeThread.projectId, identifier }),
+              )
+          }
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "linear-issue" && activeThreadRef ? (
+      isElectron ? (
+        <LinearIssueDetailPanel
+          key={renderedRightPanelSurface.id}
+          environmentId={activeThread.environmentId}
+          projectId={renderedRightPanelSurface.projectId as ProjectId}
+          identifier={renderedRightPanelSurface.identifier}
+          threadRef={activeThreadRef}
+          composerDraftTarget={composerDraftTarget}
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
     ) : renderedRightPanelSurface?.kind === "device" ? (
       <Suspense fallback={null}>
         <DevicePanel
@@ -11849,6 +11902,7 @@ export default function ChatView(props: ChatViewProps) {
           pullRequestAvailable={pullRequestSurfaceAvailable}
           pullRequestsAvailable={pullRequestsSurfaceAvailable}
           deviceAvailable={activeThreadRef !== null}
+          issueTrackerActions={issueTrackerActions}
         >
           {rightPanelContent}
         </RightPanelTabs>
@@ -11907,6 +11961,7 @@ export default function ChatView(props: ChatViewProps) {
             pullRequestAvailable={pullRequestSurfaceAvailable}
             pullRequestsAvailable={pullRequestsSurfaceAvailable}
             deviceAvailable={activeThreadRef !== null}
+            issueTrackerActions={issueTrackerActions}
           >
             {rightPanelContent}
           </RightPanelTabs>

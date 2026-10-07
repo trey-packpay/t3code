@@ -118,6 +118,7 @@ import {
 } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
+import { LinearSettingsRows } from "../linear/LinearSettingsRows";
 import { useSettingsScope } from "./SettingsScopeContext";
 import { BrowserImportWizard, type WizardTarget } from "./BrowserImportWizard";
 import type { ImportOutcome } from "./browserImportWizard.logic";
@@ -1516,6 +1517,19 @@ function BrowserProfilesSetting({ disabled }: { readonly disabled: boolean }) {
   );
 }
 
+/** Issue tracker credentials and project scopes (desktop only). Sentry and LangSmith add rows here. */
+function IssueTrackersSettingsSection() {
+  const { environment } = useSettingsScope();
+  const environmentId =
+    environment?.connection.phase === "connected" ? environment.environmentId : null;
+  if (!isElectron || environmentId === null) return null;
+  return (
+    <SettingsSection id="issue-trackers" title="Issue trackers">
+      <LinearSettingsRows key={environmentId} environmentId={environmentId} />
+    </SettingsSection>
+  );
+}
+
 export function IntegrationsSettingsPanel() {
   // Client-local preview defaults are editable only where the preview exists.
   const previewDefaultsDisabled = !isElectron;
@@ -1537,6 +1551,7 @@ export function IntegrationsSettingsPanel() {
       {/* Server-authoritative agent access is scoped by the header selection;
           the preview defaults below are device-local and ignore it. */}
       <ProjectDefaultsSettings category="integrations" />
+      <IssueTrackersSettingsSection />
       <SettingsSection id="browser" title="Browser">
         {previewDefaultsDisabled ? (
           <SettingsUnavailableGroup message="Only available in the desktop app.">

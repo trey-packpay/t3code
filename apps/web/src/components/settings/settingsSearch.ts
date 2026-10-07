@@ -710,6 +710,25 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["agent opens browser device simulator pop into view hide"],
   },
   {
+    id: "linear-credentials",
+    title: "Linear API key",
+    to: "/settings/integrations",
+    searchTerms: ["linear issues api key token credentials connect"],
+    desktopOnly: true,
+    environmentOnly: true,
+    scope: "environment-defaults",
+  },
+  {
+    id: "linear-teams",
+    title: "Linear teams",
+    to: "/settings/integrations",
+    // The row renders only once a key is saved, so the result lands on the section.
+    targetId: "issue-trackers",
+    searchTerms: ["linear teams issues project mapping"],
+    desktopOnly: true,
+    scope: "project-defaults",
+  },
+  {
     id: "automatic-pull",
     title: "Automatically pull",
     to: "/settings/source-control",

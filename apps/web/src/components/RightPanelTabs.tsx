@@ -1,4 +1,8 @@
-import { pullRequestHostOf, type SourceControlProviderKind } from "@t3tools/contracts";
+import {
+  type IssueTrackerSource,
+  pullRequestHostOf,
+  type SourceControlProviderKind,
+} from "@t3tools/contracts";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import { useProjects, useServerConfigs, useThreadShells } from "~/state/entities";
 import {
@@ -81,6 +85,28 @@ import { previewBridge } from "./preview/previewBridge";
 import { PierreEntryIcon } from "./chat/PierreEntryIcon";
 import { resolvePullRequestState } from "./pullRequest/pullRequestPresentation";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
+import { ISSUE_TRACKER_ICONS } from "~/components/issues/issueTrackerIcons";
+
+/** An issue tracker the "+" menu and the empty panel offer. Only available trackers are passed. */
+export interface IssueTrackerPanelAction {
+  readonly key: IssueTrackerSource;
+  readonly label: string;
+  readonly shortcut: string;
+  readonly onClick: () => void;
+}
+
+const NO_ISSUE_TRACKER_ACTIONS: ReadonlyArray<IssueTrackerPanelAction> = [];
+
+function issueTrackerSurfaceActions(actions: ReadonlyArray<IssueTrackerPanelAction>) {
+  return actions.map((action) => ({
+    label: action.label,
+    icon: ISSUE_TRACKER_ICONS[action.key],
+    shortcut: action.shortcut,
+    available: true,
+    disabledReason: "",
+    onClick: action.onClick,
+  }));
+}
 
 interface RightPanelTabsProps {
   mode: PreviewPanelMode;
@@ -135,6 +161,8 @@ interface RightPanelTabsProps {
   pullRequestAvailable: boolean;
   pullRequestsAvailable: boolean;
   deviceAvailable: boolean;
+  /** Issue trackers available for this thread's project (desktop only). */
+  issueTrackerActions?: ReadonlyArray<IssueTrackerPanelAction>;
   pullRequestStatusSeeds?: Readonly<Record<string, PullRequestTabStatusSeed>>;
   children: ReactNode;
 }
@@ -332,6 +360,7 @@ function RightPanelEmptyState(props: {
   pullRequestAvailable: boolean;
   pullRequestsAvailable: boolean;
   deviceAvailable: boolean;
+  issueTrackerActions: ReadonlyArray<IssueTrackerPanelAction>;
 }) {
   // -1 means no highlight: it only appears on hover or arrow use.
   const [highlight, setHighlight] = useState(-1);
@@ -385,6 +414,7 @@ function RightPanelEmptyState(props: {
       disabledReason: SURFACE_UNAVAILABLE_HINTS.pullRequests,
       onClick: props.onAddPullRequests,
     },
+    ...issueTrackerSurfaceActions(props.issueTrackerActions),
     {
       label: "Device",
       description: "Watch an iOS Simulator or Android Emulator.",
@@ -603,6 +633,10 @@ function surfaceTitle(
       return "Pull requests";
     case "device":
       return surface.title ?? surface.target?.name ?? "Device";
+    case "linear-issues":
+      return "Linear";
+    case "linear-issue":
+      return surface.identifier;
     case "preview": {
       const snapshot = surface.resourceId ? sessions[surface.resourceId] : null;
       if (!snapshot || snapshot.navStatus._tag === "Idle") return "Browser";
@@ -692,6 +726,11 @@ function SurfaceIcon({
       ) : (
         <Smartphone className="size-3 shrink-0" />
       );
+    case "linear-issues":
+    case "linear-issue": {
+      const LinearGlyph = ISSUE_TRACKER_ICONS.linear;
+      return <LinearGlyph className="size-3 shrink-0" />;
+    }
   }
 }
 
@@ -911,6 +950,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
       disabledReason: SURFACE_DISABLED_REASONS.pullRequests,
       onClick: props.onAddPullRequests,
     },
+    ...issueTrackerSurfaceActions(props.issueTrackerActions ?? NO_ISSUE_TRACKER_ACTIONS),
     {
       label: "Device",
       icon: Smartphone,
@@ -1409,6 +1449,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
             pullRequestAvailable={props.pullRequestAvailable}
             pullRequestsAvailable={props.pullRequestsAvailable}
             deviceAvailable={props.deviceAvailable}
+            issueTrackerActions={props.issueTrackerActions ?? NO_ISSUE_TRACKER_ACTIONS}
           />
         ) : (
           props.children

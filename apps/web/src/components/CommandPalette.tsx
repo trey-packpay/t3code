@@ -137,6 +137,8 @@ import {
   useRightPanelStore,
 } from "../rightPanelStore";
 import { getLatestThreadForProject, sortThreads } from "../lib/threadSort";
+import { ISSUE_TRACKER_ICONS } from "./issues/issueTrackerIcons";
+import { useIssueTrackerAvailability } from "./issues/useIssueTrackerAvailability";
 import {
   cn,
   getLocalFileManagerName,
@@ -758,6 +760,10 @@ function OpenCommandPaletteDialog(props: {
   const openPanelPullRequestUrl = useOpenPanelPullRequestUrl(referenceThreadRef);
   const activeThreadServerConfig = useServerConfigs().get(
     activeThread?.environmentId ?? ("" as EnvironmentId),
+  );
+  const issueTrackers = useIssueTrackerAvailability(
+    activeThread?.environmentId ?? null,
+    activeThread?.projectId ?? null,
   );
   const activeThreadReferenceCopyTarget =
     referenceThreadRef === null || (pathname === "/pull-requests" && !openPanelPullRequestUrl)
@@ -1975,6 +1981,21 @@ function OpenCommandPaletteDialog(props: {
 
   if (activeThread !== null) {
     const thread = activeThread;
+    // Issue tracker entries do not depend on pull request support. Sentry and LangSmith follow Linear.
+    const issueThreadRef = scopeThreadRef(thread.environmentId, thread.id);
+    if (issueTrackers.linear) {
+      const LinearGlyph = ISSUE_TRACKER_ICONS.linear;
+      actionItems.push({
+        kind: "action",
+        value: "action:open-linear-issues",
+        searchTerms: ["linear", "issues", "tickets", "tasks"],
+        title: "Show Linear issues",
+        icon: <LinearGlyph className={ITEM_ICON_CLASS} />,
+        run: async () => {
+          useRightPanelStore.getState().open(issueThreadRef, "linear-issues");
+        },
+      });
+    }
     actionItems.push({
       kind: "action",
       value: "action:restart-agent-session",

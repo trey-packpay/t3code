@@ -30,6 +30,8 @@ const RIGHT_PANEL_KINDS = [
   "terminal",
   "pull-request",
   "pull-requests",
+  "linear-issues",
+  "linear-issue",
 ] as const;
 export type RightPanelKind = (typeof RIGHT_PANEL_KINDS)[number];
 
@@ -85,7 +87,17 @@ export type RightPanelSurface =
       url?: string;
     }
   /** The thread's linked pull requests, one singleton tab beside any number of `pull-request` tabs. */
-  | { id: "pull-requests"; kind: "pull-requests" };
+  | { id: "pull-requests"; kind: "pull-requests" }
+  /** The project's Linear issues (desktop only). */
+  | { id: "linear-issues"; kind: "linear-issues" }
+  /** One Linear issue; the identifier lives in the id so several can stay open as peer tabs. */
+  | {
+      id: `linear-issue:${string}`;
+      kind: "linear-issue";
+      environmentId?: string;
+      projectId: string;
+      identifier: string;
+    };
 
 const RIGHT_PANEL_STORAGE_KEY = "t3code:right-panel-state:v2";
 // v9 removed the "plan" surface kind (plans render inline in the transcript).
@@ -137,7 +149,7 @@ interface RightPanelStoreState {
   ) => boolean;
   open: (
     ref: ScopedThreadRef,
-    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request">,
+    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request" | "linear-issue">,
   ) => void;
   openDevice: (ref: ScopedThreadRef, target: DeviceTabTarget, automatic?: boolean) => void;
   renameDevice: (ref: ScopedThreadRef, surfaceId: string, title: string) => void;
@@ -155,6 +167,8 @@ interface RightPanelStoreState {
       url?: string;
     },
   ) => void;
+  /** Opens or focuses one issue tracker item as a peer tab. */
+  openIssueTrackerItem: (ref: ScopedThreadRef, surface: IssueTrackerItemSurface) => void;
   openTerminal: (ref: ScopedThreadRef, terminalId: string) => void;
   splitTerminal: (
     ref: ScopedThreadRef,
@@ -180,7 +194,7 @@ interface RightPanelStoreState {
   toggleVisibility: (ref: ScopedThreadRef) => void;
   toggle: (
     ref: ScopedThreadRef,
-    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request">,
+    kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request" | "linear-issue">,
   ) => void;
   setThreadPanelOpen: (
     ref: ScopedThreadRef,
@@ -203,7 +217,7 @@ const DEFAULT_THREAD_PANEL_VISIBILITY: ThreadPanelVisibility = {
 };
 
 const singletonSurface = (
-  kind: Exclude<RightPanelKind, "file" | "preview" | "terminal" | "pull-request">,
+  kind: Exclude<RightPanelKind, "file" | "preview" | "terminal" | "pull-request" | "linear-issue">,
 ): RightPanelSurface => {
   switch (kind) {
     case "diff":
@@ -214,6 +228,8 @@ const singletonSurface = (
       return { id: "pull-requests", kind };
     case "device":
       return { id: "device", kind };
+    case "linear-issues":
+      return { id: "linear-issues", kind };
   }
 };
 
@@ -285,6 +301,23 @@ export function pullRequestSurface(target: {
     repository: target.repository,
     number: target.number,
     ...(typeof target.url === "string" ? { url: target.url } : {}),
+  };
+}
+
+/** A single issue tracker item opened beside a thread. Sentry and LangSmith add their kinds here. */
+export type IssueTrackerItemSurface = Extract<RightPanelSurface, { kind: "linear-issue" }>;
+
+export function linearIssueSurface(target: {
+  environmentId?: string;
+  projectId: string;
+  identifier: string;
+}): Extract<RightPanelSurface, { kind: "linear-issue" }> {
+  return {
+    id: `linear-issue:${encodeURIComponent(target.projectId)}:${encodeURIComponent(target.identifier)}`,
+    kind: "linear-issue",
+    ...(target.environmentId === undefined ? {} : { environmentId: target.environmentId }),
+    projectId: target.projectId,
+    identifier: target.identifier,
   };
 }
 
@@ -686,6 +719,10 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
                 }
               : next;
           }),
+        ),
+      openIssueTrackerItem: (ref, surface) =>
+        set((state) =>
+          userAction(state, scopedThreadKey(ref), (current) => upsertSurface(current, surface)),
         ),
       openFile: (ref, requestedPath, line) =>
         set((state) =>
