@@ -347,6 +347,14 @@ import {
   LinearListTeamsInput,
   LinearListTeamsResult,
 } from "./linear.ts";
+import {
+  SentryIssueDetail,
+  SentryIssueDetailInput,
+  SentryListIssuesInput,
+  SentryListIssuesResult,
+  SentryListProjectsInput,
+  SentryListProjectsResult,
+} from "./sentry.ts";
 import { VcsError } from "./vcs.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
@@ -534,6 +542,9 @@ export const WS_METHODS = {
   linearListTeams: "linear.listTeams",
   linearListIssues: "linear.listIssues",
   linearIssueDetail: "linear.issueDetail",
+  sentryListProjects: "sentry.listProjects",
+  sentryListIssues: "sentry.listIssues",
+  sentryIssueDetail: "sentry.issueDetail",
   sourceControlCloneRepository: "sourceControl.cloneRepository",
   sourceControlPublishRepository: "sourceControl.publishRepository",
   projectCloneStart: "projectClone.start",
@@ -1116,6 +1127,22 @@ const WsLinearListIssuesRpc = Rpc.make(WS_METHODS.linearListIssues, {
 const WsLinearIssueDetailRpc = Rpc.make(WS_METHODS.linearIssueDetail, {
   payload: LinearIssueDetailInput,
   success: LinearIssueDetail,
+  error: IssueTrackerRpcError,
+});
+
+const WsSentryListProjectsRpc = Rpc.make(WS_METHODS.sentryListProjects, {
+  payload: SentryListProjectsInput,
+  success: SentryListProjectsResult,
+  error: IssueTrackerRpcError,
+});
+const WsSentryListIssuesRpc = Rpc.make(WS_METHODS.sentryListIssues, {
+  payload: SentryListIssuesInput,
+  success: SentryListIssuesResult,
+  error: IssueTrackerRpcError,
+});
+const WsSentryIssueDetailRpc = Rpc.make(WS_METHODS.sentryIssueDetail, {
+  payload: SentryIssueDetailInput,
+  success: SentryIssueDetail,
   error: IssueTrackerRpcError,
 });
 
@@ -1868,6 +1895,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsLinearListTeamsRpc,
   WsLinearListIssuesRpc,
   WsLinearIssueDetailRpc,
+  WsSentryListProjectsRpc,
+  WsSentryListIssuesRpc,
+  WsSentryIssueDetailRpc,
   WsSourceControlCloneRepositoryRpc,
   WsSourceControlPublishRepositoryRpc,
   WsProjectCloneStartRpc,
