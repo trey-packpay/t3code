@@ -26,7 +26,9 @@ import * as ServerSettings from "../serverSettings.ts";
 
 const DEFAULT_ENDPOINT = "https://api.smith.langchain.com";
 const PAGE_SIZE = 50;
-const CHILD_LIMIT = 100;
+const PROJECT_PAGE_SIZE = 100;
+const PROJECT_LIMIT = 500;
+const CHILD_LIMIT = 50;
 const JSON_FIELD_MAX_CHARS = 32_000;
 const WINDOW_MS: Record<LangSmithListRunsInput["window"], number> = {
   "24h": 24 * 60 * 60 * 1000,
@@ -81,9 +83,14 @@ const fail = (reason: IssueTrackerErrorReason, upstreamMessage?: string) =>
 const fromHttpFailure = (failure: IssueTrackerHttpFailure) =>
   fail(failure.reason, failure.upstreamMessage);
 
+/** LangSmith's timestamps without a zone designator are UTC. */
+const normalizeTimestamp = (value: string): string =>
+  /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`;
+
 const latencyMs = (run: RawRun): number | null => {
   if (!run.end_time) return null;
-  const elapsed = Date.parse(run.end_time) - Date.parse(run.start_time);
+  const elapsed =
+    Date.parse(normalizeTimestamp(run.end_time)) - Date.parse(normalizeTimestamp(run.start_time));
   return Number.isFinite(elapsed) ? Math.max(0, elapsed) : null;
 };
 
@@ -118,7 +125,9 @@ const make = Effect.gen(function* () {
         : Effect.succeed({
             settings,
             apiKey: settings.langsmith.apiKey,
-            endpoint: (settings.langsmith.endpoint || DEFAULT_ENDPOINT).replace(/\/+$/, ""),
+            endpoint: (settings.langsmith.endpoint || DEFAULT_ENDPOINT)
+              .replace(/\/+$/, "")
+              .replace(/\/api(\/v1)?$/, ""),
           }),
     ),
   );
@@ -139,12 +148,19 @@ const make = Effect.gen(function* () {
 
   const listProjects = Effect.gen(function* () {
     const config = yield* requireConfig;
-    const projects = yield* request(
-      config.apiKey,
-      HttpClientRequest.get(`${config.endpoint}/api/v1/sessions?limit=${PAGE_SIZE}`),
-      Schema.Array(LangSmithProject),
-    );
-    return { projects: projects.slice(0, PAGE_SIZE) };
+    const projects: LangSmithProject[] = [];
+    for (let offset = 0; offset < PROJECT_LIMIT; offset += PROJECT_PAGE_SIZE) {
+      const page = yield* request(
+        config.apiKey,
+        HttpClientRequest.get(
+          `${config.endpoint}/api/v1/sessions?reference_free=true&limit=${PROJECT_PAGE_SIZE}&offset=${offset}`,
+        ),
+        Schema.Array(LangSmithProject),
+      );
+      projects.push(...page.slice(0, Math.min(PROJECT_PAGE_SIZE, PROJECT_LIMIT - projects.length)));
+      if (page.length < PROJECT_PAGE_SIZE) break;
+    }
+    return { projects };
   }).pipe(Effect.withSpan("LangSmithService.listProjects"));
 
   const listErroredRuns = Effect.fn("LangSmithService.listErroredRuns")(function* (
@@ -189,7 +205,7 @@ const make = Effect.gen(function* () {
       runType: run.run_type,
       errorFirstLine: (run.error ?? "").split("\n")[0]?.slice(0, 300) ?? "",
       projectName: (run.session_id && names.get(run.session_id)) || "",
-      startTime: run.start_time,
+      startTime: normalizeTimestamp(run.start_time),
       latencyMs: latencyMs(run),
       totalTokens: run.total_tokens ?? null,
     }));
@@ -211,13 +227,21 @@ const make = Effect.gen(function* () {
       HttpClientRequest.post(`${config.endpoint}/api/v1/runs/query`).pipe(
         HttpClientRequest.bodyJsonUnsafe({
           trace: traceId,
-          limit: Math.min(CHILD_LIMIT, PAGE_SIZE),
+          limit: CHILD_LIMIT,
+          order: "asc",
           select: ["id", "name", "run_type", "error", "start_time", "end_time", "parent_run_id"],
         }),
       ),
       RunsPage,
-    ).pipe(Effect.orElseSucceed(() => ({ runs: [], cursors: null })));
-    const traceRuns = trace.runs.slice(0, Math.min(CHILD_LIMIT, PAGE_SIZE));
+    ).pipe(
+      Effect.catchTags({
+        IssueTrackerError: (error) =>
+          error.reason === "not-found"
+            ? Effect.succeed({ runs: [], cursors: null })
+            : Effect.fail(error),
+      }),
+    );
+    const traceRuns = trace.runs.slice(0, CHILD_LIMIT);
     const parents = new Map(traceRuns.map((child) => [child.id, child.parent_run_id ?? null]));
     const depthOf = (id: string): number => {
       let depth = 0;
@@ -226,11 +250,15 @@ const make = Effect.gen(function* () {
         depth += 1;
         parent = parents.get(parent) ?? null;
       }
-      return depth;
+      return Math.max(0, depth - 1);
     };
     const children = traceRuns
       .filter((child) => child.id !== run.id)
-      .sort((a, b) => Date.parse(a.start_time) - Date.parse(b.start_time))
+      .sort(
+        (a, b) =>
+          Date.parse(normalizeTimestamp(a.start_time)) -
+          Date.parse(normalizeTimestamp(b.start_time)),
+      )
       .map((child) => ({
         name: child.name,
         runType: child.run_type,
@@ -245,7 +273,7 @@ const make = Effect.gen(function* () {
       runType: run.run_type,
       errorFirstLine: (run.error ?? "").split("\n")[0]?.slice(0, 300) ?? "",
       projectName: "",
-      startTime: run.start_time,
+      startTime: normalizeTimestamp(run.start_time),
       latencyMs: latencyMs(run),
       totalTokens: run.total_tokens ?? null,
       url: run.app_path ? `${origin}${run.app_path}` : origin,
