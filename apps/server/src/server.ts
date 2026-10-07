@@ -156,6 +156,7 @@ import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
 import * as UsageService from "./usage/UsageService.ts";
 import * as Linear from "./linear/LinearService.ts";
 import * as Sentry from "./sentry/SentryService.ts";
+import * as LangSmith from "./langsmith/LangSmithService.ts";
 import * as RuntimeLayer from "./orchestration-v2/runtimeLayer.ts";
 import * as ProjectStore from "./orchestration-v2/ProjectStore.ts";
 import * as ThreadSearch from "./orchestration-v2/ThreadSearch.ts";
@@ -230,6 +231,7 @@ const layerBackground = BackgroundPolicy.layer.pipe(
 const layerUsage = UsageService.layer.pipe(Layer.provide(layerServerSettings));
 const layerLinear = Linear.layer.pipe(Layer.provide(layerServerSettings));
 const layerSentry = Sentry.layer.pipe(Layer.provide(layerServerSettings));
+const layerLangSmith = LangSmith.layer.pipe(Layer.provide(layerServerSettings));
 
 const layerResourceDiagnostics = Layer.mergeAll(
   HostResources.layer,
@@ -641,6 +643,7 @@ const layerRuntimeDependencies = layerRuntimeCoreDependencies.pipe(
   Layer.provideMerge(layerUsage),
   Layer.provideMerge(layerLinear),
   Layer.provideMerge(layerSentry),
+  Layer.provideMerge(layerLangSmith),
   Layer.provideMerge(TraceDiagnostics.layer),
   Layer.provideMerge(AnalyticsService.layer),
   Layer.provideMerge(ExternalLauncher.layer),

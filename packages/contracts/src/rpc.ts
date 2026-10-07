@@ -355,6 +355,14 @@ import {
   SentryListProjectsInput,
   SentryListProjectsResult,
 } from "./sentry.ts";
+import {
+  LangSmithListProjectsInput,
+  LangSmithListProjectsResult,
+  LangSmithListRunsInput,
+  LangSmithListRunsResult,
+  LangSmithRunDetail,
+  LangSmithRunDetailInput,
+} from "./langsmith.ts";
 import { VcsError } from "./vcs.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
@@ -545,6 +553,9 @@ export const WS_METHODS = {
   sentryListProjects: "sentry.listProjects",
   sentryListIssues: "sentry.listIssues",
   sentryIssueDetail: "sentry.issueDetail",
+  langsmithListProjects: "langsmith.listProjects",
+  langsmithListErroredRuns: "langsmith.listErroredRuns",
+  langsmithRunDetail: "langsmith.runDetail",
   sourceControlCloneRepository: "sourceControl.cloneRepository",
   sourceControlPublishRepository: "sourceControl.publishRepository",
   projectCloneStart: "projectClone.start",
@@ -1143,6 +1154,22 @@ const WsSentryListIssuesRpc = Rpc.make(WS_METHODS.sentryListIssues, {
 const WsSentryIssueDetailRpc = Rpc.make(WS_METHODS.sentryIssueDetail, {
   payload: SentryIssueDetailInput,
   success: SentryIssueDetail,
+  error: IssueTrackerRpcError,
+});
+
+const WsLangSmithListProjectsRpc = Rpc.make(WS_METHODS.langsmithListProjects, {
+  payload: LangSmithListProjectsInput,
+  success: LangSmithListProjectsResult,
+  error: IssueTrackerRpcError,
+});
+const WsLangSmithListErroredRunsRpc = Rpc.make(WS_METHODS.langsmithListErroredRuns, {
+  payload: LangSmithListRunsInput,
+  success: LangSmithListRunsResult,
+  error: IssueTrackerRpcError,
+});
+const WsLangSmithRunDetailRpc = Rpc.make(WS_METHODS.langsmithRunDetail, {
+  payload: LangSmithRunDetailInput,
+  success: LangSmithRunDetail,
   error: IssueTrackerRpcError,
 });
 
@@ -1898,6 +1925,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsSentryListProjectsRpc,
   WsSentryListIssuesRpc,
   WsSentryIssueDetailRpc,
+  WsLangSmithListProjectsRpc,
+  WsLangSmithListErroredRunsRpc,
+  WsLangSmithRunDetailRpc,
   WsSourceControlCloneRepositoryRpc,
   WsSourceControlPublishRepositoryRpc,
   WsProjectCloneStartRpc,
