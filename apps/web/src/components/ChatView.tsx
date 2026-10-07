@@ -10992,7 +10992,7 @@ export default function ChatView(props: ChatViewProps) {
         <LinearIssueDetailPanel
           key={renderedRightPanelSurface.id}
           environmentId={activeThread.environmentId}
-          projectId={renderedRightPanelSurface.projectId as ProjectId}
+          projectId={renderedRightPanelSurface.projectId}
           identifier={renderedRightPanelSurface.identifier}
           threadRef={activeThreadRef}
           composerDraftTarget={composerDraftTarget}

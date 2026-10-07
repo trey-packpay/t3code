@@ -47,6 +47,28 @@ export function openIssueUrl(url: string) {
   void readLocalApi()?.shell.openExternal(url);
 }
 
+/** A one-line request error with Retry, for a failure that leaves other content in place. */
+export function IssueErrorAlert(props: {
+  readonly error: string;
+  readonly onRetry: (() => void) | undefined;
+}) {
+  return (
+    <Alert variant="error" role="status" aria-live="polite">
+      <CircleAlertIcon />
+      <AlertDescription>
+        <span className="truncate">{props.error}</span>
+      </AlertDescription>
+      {props.onRetry ? (
+        <AlertAction>
+          <Button size="xs" variant="outline" onClick={props.onRetry}>
+            Retry
+          </Button>
+        </AlertAction>
+      ) : null}
+    </Alert>
+  );
+}
+
 /** A refresh that failed while data is already shown: the content stays below it. */
 function IssueInlineError(props: {
   readonly error: string;
@@ -54,19 +76,7 @@ function IssueInlineError(props: {
 }) {
   return (
     <div className="border-b border-border/60 px-2 py-1.5">
-      <Alert variant="error" role="status" aria-live="polite">
-        <CircleAlertIcon />
-        <AlertDescription>
-          <span className="truncate">{props.error}</span>
-        </AlertDescription>
-        {props.onRetry ? (
-          <AlertAction>
-            <Button size="xs" variant="outline" onClick={props.onRetry}>
-              Retry
-            </Button>
-          </AlertAction>
-        ) : null}
-      </Alert>
+      <IssueErrorAlert error={props.error} onRetry={props.onRetry} />
     </div>
   );
 }

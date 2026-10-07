@@ -12,7 +12,7 @@ import {
   scopedThreadKey,
   scopeThreadRef,
 } from "@t3tools/client-runtime/environment";
-import { EnvironmentId, ThreadId, type ScopedThreadRef } from "@t3tools/contracts";
+import { EnvironmentId, type ProjectId, ThreadId, type ScopedThreadRef } from "@t3tools/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -94,8 +94,7 @@ export type RightPanelSurface =
   | {
       id: `linear-issue:${string}`;
       kind: "linear-issue";
-      environmentId?: string;
-      projectId: string;
+      projectId: ProjectId;
       identifier: string;
     };
 
@@ -308,14 +307,12 @@ export function pullRequestSurface(target: {
 export type IssueTrackerItemSurface = Extract<RightPanelSurface, { kind: "linear-issue" }>;
 
 export function linearIssueSurface(target: {
-  environmentId?: string;
-  projectId: string;
+  projectId: ProjectId;
   identifier: string;
 }): Extract<RightPanelSurface, { kind: "linear-issue" }> {
   return {
     id: `linear-issue:${encodeURIComponent(target.projectId)}:${encodeURIComponent(target.identifier)}`,
     kind: "linear-issue",
-    ...(target.environmentId === undefined ? {} : { environmentId: target.environmentId }),
     projectId: target.projectId,
     identifier: target.identifier,
   };

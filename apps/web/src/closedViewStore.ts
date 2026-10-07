@@ -96,11 +96,7 @@ const isClosedViewEntry = (entry: unknown): entry is ClosedViewEntry => {
     case "linear-issues":
       return surface.id === surface.kind;
     case "linear-issue":
-      return (
-        typeof surface.projectId === "string" &&
-        typeof surface.identifier === "string" &&
-        (surface.environmentId === undefined || typeof surface.environmentId === "string")
-      );
+      return typeof surface.projectId === "string" && typeof surface.identifier === "string";
     default:
       return false;
   }

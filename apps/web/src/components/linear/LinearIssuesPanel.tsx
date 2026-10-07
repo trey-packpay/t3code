@@ -15,14 +15,8 @@ import { useEnvironmentQuery } from "~/state/query";
 import { serverEnvironment } from "~/state/server";
 import { formatRelativeTimeLabel } from "~/timestampFormat";
 
-import {
-  type IssueFilterOption,
-  IssueListShell,
-  IssueListSkeleton,
-  IssueRow,
-  IssueTrackerStateView,
-  LoadMoreButton,
-} from "../issues/IssuePanelChrome";
+import { IssuePageList, useIssuePages } from "../issues/IssuePagedList";
+import { type IssueFilterOption, IssueListShell, IssueRow } from "../issues/IssuePanelChrome";
 import { LINEAR_PRIORITY_LABELS } from "./linearIssueDocument";
 
 const FILTERS: ReadonlyArray<IssueFilterOption<LinearIssueFilter>> = [
@@ -49,29 +43,12 @@ export function LinearIssuesPanel(props: {
   const [filter, setFilter] = useState<LinearIssueFilter>("open");
   const [queryInput, setQueryInput] = useState("");
   const query = useDebouncedValue(queryInput.trim(), 300);
-  const listKey = `${filter}|${query}`;
-  // Later pages belong to one filter and query; a change starts from the first page again.
-  const [more, setMore] = useState<{ key: string; cursors: ReadonlyArray<string> }>({
-    key: "",
-    cursors: [],
-  });
-  const cursors = more.key === listKey ? more.cursors : [];
-
-  const baseInput = useMemo<LinearListIssuesInput>(
+  const input = useMemo<LinearListIssuesInput>(
     () => ({ projectId: props.projectId, filter, ...(query.length > 0 ? { query } : {}) }),
     [filter, props.projectId, query],
   );
-  const firstPage = useEnvironmentQuery(
-    linearEnvironment.issues({ environmentId: props.environmentId, input: baseInput }),
-  );
+  const pages = useIssuePages(linearEnvironment.issues, props.environmentId, input);
   const scopeLabel = useLinearScopeLabel(props.environmentId, props.projectId);
-
-  const loadMore = (cursor: string) => setMore({ key: listKey, cursors: [...cursors, cursor] });
-  const refresh = () => {
-    setMore({ key: listKey, cursors: [] });
-    firstPage.refresh();
-  };
-  const firstNextCursor = firstPage.data?.nextCursor ?? null;
 
   return (
     <IssueListShell
@@ -82,75 +59,23 @@ export function LinearIssuesPanel(props: {
       filter={filter}
       filterOptions={FILTERS}
       onFilterChange={setFilter}
-      refreshing={firstPage.isPending}
-      onRefresh={refresh}
-      // A failed refresh keeps the last good list below a one-line error.
-      error={firstPage.data === null ? null : firstPage.error}
-      onRetry={refresh}
+      refreshing={pages.refreshing}
+      onRefresh={pages.refresh}
+      error={pages.staleError}
+      onRetry={pages.refresh}
     >
-      {firstPage.data === null ? (
-        firstPage.error !== null ? (
-          <IssueTrackerStateView
-            source="linear"
-            failure={firstPage.failure}
-            error={firstPage.error}
-            onRetry={refresh}
-          />
-        ) : (
-          <IssueListSkeleton />
-        )
-      ) : firstPage.data.issues.length === 0 ? (
-        <IssueTrackerStateView
-          source="linear"
-          failure={null}
-          error={null}
-          emptyMessage={
-            query.length > 0 ? `No issues match "${query}".` : "No issues for this filter."
-          }
-        />
-      ) : (
-        <>
-          <LinearIssueRows issues={firstPage.data.issues} onOpenIssue={props.onOpenIssue} />
-          {cursors.map((cursor, index) => (
-            <LinearIssuePage
-              key={cursor}
-              environmentId={props.environmentId}
-              input={{ ...baseInput, cursor }}
-              isLast={index === cursors.length - 1}
-              onOpenIssue={props.onOpenIssue}
-              onLoadMore={loadMore}
-            />
-          ))}
-          {cursors.length === 0 && firstNextCursor !== null ? (
-            <LoadMoreButton loading={false} onClick={() => loadMore(firstNextCursor)} />
-          ) : null}
-        </>
-      )}
+      <IssuePageList
+        source="linear"
+        pages={pages}
+        isEmpty={(page) => page.issues.length === 0}
+        emptyMessage={
+          query.length > 0 ? `No issues match "${query}".` : "No issues for this filter."
+        }
+        renderPage={(page) => (
+          <LinearIssueRows issues={page.issues} onOpenIssue={props.onOpenIssue} />
+        )}
+      />
     </IssueListShell>
-  );
-}
-
-function LinearIssuePage(props: {
-  readonly environmentId: EnvironmentId;
-  readonly input: LinearListIssuesInput;
-  readonly isLast: boolean;
-  readonly onOpenIssue: (identifier: string) => void;
-  readonly onLoadMore: (cursor: string) => void;
-}) {
-  const page = useEnvironmentQuery(
-    linearEnvironment.issues({ environmentId: props.environmentId, input: props.input }),
-  );
-  if (page.data === null) {
-    return <LoadMoreButton loading={page.error === null} onClick={page.refresh} />;
-  }
-  const nextCursor = page.data.nextCursor;
-  return (
-    <>
-      <LinearIssueRows issues={page.data.issues} onOpenIssue={props.onOpenIssue} />
-      {props.isLast && nextCursor !== null ? (
-        <LoadMoreButton loading={false} onClick={() => props.onLoadMore(nextCursor)} />
-      ) : null}
-    </>
   );
 }
 

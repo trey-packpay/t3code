@@ -78,3 +78,25 @@ export function MultiSelectMenu(props: {
     </Menu>
   );
 }
+
+/** Save and Remove for a tracker's credential row; Remove only shows while a token is saved. */
+export function CredentialButtons(props: {
+  readonly saving: boolean;
+  readonly canSave: boolean;
+  readonly isSaved: boolean;
+  readonly onSave: () => void;
+  readonly onRemove: () => void;
+}) {
+  return (
+    <>
+      <Button size="sm" disabled={props.saving || !props.canSave} onClick={props.onSave}>
+        Save
+      </Button>
+      {props.isSaved ? (
+        <Button size="sm" variant="ghost" disabled={props.saving} onClick={props.onRemove}>
+          Remove
+        </Button>
+      ) : null}
+    </>
+  );
+}
