@@ -338,6 +338,15 @@ import {
   SourceControlRepositoryInfo,
   SourceControlRepositoryLookupInput,
 } from "./sourceControl.ts";
+import { IssueTrackerError } from "./issueTrackerError.ts";
+import {
+  LinearIssueDetail,
+  LinearIssueDetailInput,
+  LinearListIssuesInput,
+  LinearListIssuesResult,
+  LinearListTeamsInput,
+  LinearListTeamsResult,
+} from "./linear.ts";
 import { VcsError } from "./vcs.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
@@ -521,6 +530,10 @@ export const WS_METHODS = {
 
   // Source control methods
   sourceControlLookupRepository: "sourceControl.lookupRepository",
+  // Issue tracker methods (desktop UI)
+  linearListTeams: "linear.listTeams",
+  linearListIssues: "linear.listIssues",
+  linearIssueDetail: "linear.issueDetail",
   sourceControlCloneRepository: "sourceControl.cloneRepository",
   sourceControlPublishRepository: "sourceControl.publishRepository",
   projectCloneStart: "projectClone.start",
@@ -1086,6 +1099,24 @@ const WsSourceControlLookupRepositoryRpc = Rpc.make(WS_METHODS.sourceControlLook
   payload: SourceControlRepositoryLookupInput,
   success: SourceControlRepositoryInfo,
   error: Schema.Union([SourceControlRepositoryError, EnvironmentAuthorizationError]),
+});
+
+const IssueTrackerRpcError = Schema.Union([IssueTrackerError, EnvironmentAuthorizationError]);
+
+const WsLinearListTeamsRpc = Rpc.make(WS_METHODS.linearListTeams, {
+  payload: LinearListTeamsInput,
+  success: LinearListTeamsResult,
+  error: IssueTrackerRpcError,
+});
+const WsLinearListIssuesRpc = Rpc.make(WS_METHODS.linearListIssues, {
+  payload: LinearListIssuesInput,
+  success: LinearListIssuesResult,
+  error: IssueTrackerRpcError,
+});
+const WsLinearIssueDetailRpc = Rpc.make(WS_METHODS.linearIssueDetail, {
+  payload: LinearIssueDetailInput,
+  success: LinearIssueDetail,
+  error: IssueTrackerRpcError,
 });
 
 const WsSourceControlCloneRepositoryRpc = Rpc.make(WS_METHODS.sourceControlCloneRepository, {
@@ -1834,6 +1865,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsPullRequestsLabelCandidatesRpc,
   WsPullRequestsSetLabelsRpc,
   WsSourceControlLookupRepositoryRpc,
+  WsLinearListTeamsRpc,
+  WsLinearListIssuesRpc,
+  WsLinearIssueDetailRpc,
   WsSourceControlCloneRepositoryRpc,
   WsSourceControlPublishRepositoryRpc,
   WsProjectCloneStartRpc,
