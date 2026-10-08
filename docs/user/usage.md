@@ -99,6 +99,11 @@ current model's limits without leaving the conversation. The result opens above 
 closes when you dismiss it or send your next message. It uses the same snapshot as **Usage → Limits**, so it does not run the agent or refresh
 anything. The command is offered only for providers that appear under **Usage → Limits**.
 
+In the desktop app, the status line under the composer always shows the current model's context
+window, session and weekly limits, and prompt cache hit rate, with uncommitted changes and the
+pull request's review state. Its percentages show how much is **used**, while **Usage → Limits**
+shows how much remains. Turn it off in **Settings → General → Status line**.
+
 OpenCode Go reports its session, weekly, and monthly allowance when OpenCode runs locally in
 the environment. T3 cannot report limits for external OpenCode servers because their credentials
 belong to the remote server. Cursor reports

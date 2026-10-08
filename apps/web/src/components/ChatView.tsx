@@ -37,6 +37,7 @@ import {
 } from "@t3tools/shared/usageLimits";
 import { feedbackBannerItem } from "./chat/ComposerFeedback";
 import { usageLimitsBannerItem } from "./chat/ComposerUsageLimits";
+import { ChatStatusLine } from "./chat/StatusLine";
 import { getTerminalLabel } from "@t3tools/shared/terminalLabels";
 import * as Schema from "effect/Schema";
 import {
@@ -11711,10 +11712,15 @@ export default function ChatView(props: ChatViewProps) {
                         </div>
                       </div>
                     </ComposerSurface.Shell>
-                    <div
-                      aria-hidden
-                      className="h-[calc(env(safe-area-inset-bottom)+1rem)] sm:h-[calc(env(safe-area-inset-bottom)+1.25rem)]"
-                    />
+                    <div className="flex h-[calc(env(safe-area-inset-bottom)+1rem)] items-center sm:h-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+                      <ChatStatusLine
+                        threadRef={activeThreadRef}
+                        contextWindow={activeContextWindow}
+                        usageWindows={activeProviderStatus?.usageLimits?.windows}
+                        vcsStatus={gitStatusQuery.data}
+                        pullRequests={(activeThreadShell ?? activeThread)?.pullRequests}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

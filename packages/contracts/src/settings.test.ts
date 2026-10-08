@@ -682,6 +682,13 @@ describe("ClientSettings follow-up behavior", () => {
   });
 });
 
+describe("ClientSettings status line", () => {
+  it("shows by default and accepts opting out", () => {
+    expect(decodeClientSettings({}).statusLineEnabled).toBe(true);
+    expect(decodeClientSettingsPatch({ statusLineEnabled: false }).statusLineEnabled).toBe(false);
+  });
+});
+
 describe("ClientSettings composer collapse", () => {
   it("collapses on scroll by default and accepts opting out", () => {
     expect(decodeClientSettings({}).composerCollapseOnScroll).toBe(true);

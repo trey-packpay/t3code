@@ -407,6 +407,15 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["composer rest resting scroll wheel conversation timeline shrink minimize"],
   },
   {
+    id: "status-line",
+    title: "Status line",
+    to: "/settings/general",
+    searchTerms: [
+      "statusline footer context window usage limits session weekly cache hit pr review",
+    ],
+    desktopOnly: true,
+  },
+  {
     id: "send-shortcut",
     title: "Send shortcut",
     to: "/settings/general",
