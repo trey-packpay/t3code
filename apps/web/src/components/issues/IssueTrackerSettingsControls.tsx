@@ -29,18 +29,29 @@ export interface MultiSelectOption {
   readonly label: string;
 }
 
+/**
+ * `selected` carries each stored value with its stored label, so a mapping that is no longer in
+ * the loaded `options` still renders (marked unavailable) and can be unchecked.
+ */
 export function MultiSelectMenu(props: {
   readonly ariaLabel: string;
   readonly options: ReadonlyArray<MultiSelectOption>;
-  readonly selected: ReadonlyArray<string>;
+  readonly selected: ReadonlyArray<MultiSelectOption>;
   readonly placeholder: string;
   readonly disabled?: boolean;
   readonly onChange: (selected: ReadonlyArray<string>) => void;
 }) {
-  const selected = new Set(props.selected);
-  const labels = props.options
-    .filter((option) => selected.has(option.value))
-    .map((option) => option.label);
+  const selectedValues = props.selected.map((option) => option.value);
+  const selected = new Set(selectedValues);
+  const available = new Set(props.options.map((option) => option.value));
+  // Options are not loaded while disabled, so nothing can be called unavailable yet.
+  const missing = props.disabled
+    ? []
+    : props.selected
+        .filter((option) => !available.has(option.value))
+        .map((option) => ({ value: option.value, label: `${option.label} (unavailable)` }));
+  const items = [...props.options, ...missing];
+  const labels = items.filter((option) => selected.has(option.value)).map((option) => option.label);
   return (
     <Menu>
       <MenuTrigger
@@ -59,15 +70,15 @@ export function MultiSelectMenu(props: {
         }
       />
       <MenuPopup align="end">
-        {props.options.map((option) => (
+        {items.map((option) => (
           <MenuCheckboxItem
             key={option.value}
             checked={selected.has(option.value)}
             onCheckedChange={(checked) =>
               props.onChange(
                 checked
-                  ? [...props.selected, option.value]
-                  : props.selected.filter((value) => value !== option.value),
+                  ? [...selectedValues, option.value]
+                  : selectedValues.filter((value) => value !== option.value),
               )
             }
           >

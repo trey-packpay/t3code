@@ -94,10 +94,13 @@ const latencyMs = (run: RawRun): number | null => {
   return Number.isFinite(elapsed) ? Math.max(0, elapsed) : null;
 };
 
-/** `api.smith.langchain.com` → `smith.langchain.com`; self-hosted hosts are used as-is. */
+/**
+ * `api.smith.langchain.com` → `smith.langchain.com`, `eu.api.smith.langchain.com` →
+ * `eu.smith.langchain.com`; self-hosted hosts are used as-is.
+ */
 export function appOriginFor(endpoint: string): string {
   const url = new URL(endpoint);
-  url.hostname = url.hostname.replace(/(^|\.)api\./, "$1");
+  url.hostname = url.hostname.replace(/(^|\.)api\.(smith\.langchain\.com)$/, "$1$2");
   return url.origin;
 }
 

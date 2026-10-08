@@ -80,6 +80,15 @@ export const executeJson = <S extends Schema.Top>(
     .pipe(
       Effect.flatMap((response) => classify(response, schema)),
       Effect.timeout(REQUEST_TIMEOUT),
+      // Log only the failure kind (e.g. TransportError or TimeoutError): URLs, headers, and
+      // bodies can carry tokens or search terms.
+      Effect.tapError((error) =>
+        error._tag === "IssueTrackerHttpFailure"
+          ? Effect.void
+          : Effect.logDebug("Issue tracker request did not complete", {
+              failure: error._tag === "HttpClientError" ? error.reason._tag : error._tag,
+            }),
+      ),
       Effect.mapError((error) =>
         error._tag === "IssueTrackerHttpFailure"
           ? error

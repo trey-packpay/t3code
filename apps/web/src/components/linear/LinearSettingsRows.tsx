@@ -77,7 +77,7 @@ export function LinearSettingsRows(props: { readonly environmentId: EnvironmentI
                 value: team.id,
                 label: `${team.key} · ${team.name}`,
               }))}
-              selected={scoped.linearTeamIds}
+              selected={scoped.linearTeamIds.map((id) => ({ value: id, label: id }))}
               onChange={(linearTeamIds) => updateScoped({ linearTeamIds: [...linearTeamIds] })}
             />
           }

@@ -28,6 +28,9 @@ const DEFAULT_BASE_URL = "https://sentry.io";
 const PAGE_SIZE = 50;
 const FRAME_LIMIT = 30;
 const CONTEXT_LINES_LIMIT = 7;
+const EXCEPTION_LIMIT = 5;
+const EXCEPTION_VALUE_MAX_CHARS = 2_000;
+const BREADCRUMB_MESSAGE_MAX_CHARS = 500;
 const BREADCRUMB_LIMIT = 20;
 const TAG_LIMIT = 40;
 
@@ -152,6 +155,8 @@ function eventDetail(event: RawEvent | null) {
         onSome: (data) => data.values,
       }),
     )
+    // Chained exceptions are oldest-first; the one that was raised is last.
+    .slice(-EXCEPTION_LIMIT)
     .map((value) => {
       const frames = value.stacktrace?.frames ?? [];
       const inApp = frames.filter((frame) => frame.inApp === true);
@@ -159,7 +164,7 @@ function eventDetail(event: RawEvent | null) {
       const chosen = (inApp.length > 0 ? inApp : frames).slice(-FRAME_LIMIT);
       return {
         type: value.type ?? "Error",
-        value: value.value ?? "",
+        value: (value.value ?? "").slice(0, EXCEPTION_VALUE_MAX_CHARS),
         frames: chosen.map((frame) => ({
           filename: frame.filename ?? null,
           function: frame.function ?? null,
@@ -184,7 +189,7 @@ function eventDetail(event: RawEvent | null) {
       timestamp: crumb.timestamp ?? null,
       category: crumb.category ?? null,
       level: crumb.level ?? null,
-      message: crumb.message ?? null,
+      message: crumb.message?.slice(0, BREADCRUMB_MESSAGE_MAX_CHARS) ?? null,
     }));
   const tags = (event?.tags ?? []).slice(0, TAG_LIMIT);
   return {

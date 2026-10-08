@@ -1,4 +1,4 @@
-import type { EnvironmentId, IssueTrackerSource } from "@t3tools/contracts";
+import type { EnvironmentId, IssueTrackerSource, ProjectId } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import type { AsyncResult, Atom } from "effect/reactivity";
 import { type ReactNode, useState } from "react";
@@ -19,6 +19,7 @@ export type IssuePageQuery<Input, Page, E> = (target: {
 }) => Atom.Atom<AsyncResult.AsyncResult<Page, E>>;
 
 interface CursorInput {
+  readonly projectId: ProjectId;
   readonly cursor?: string;
 }
 
@@ -97,6 +98,10 @@ export function IssuePageList<Input extends CursorInput, Page extends CursorPage
         source={props.source}
         failure={firstPage.failure}
         error={firstPage.error}
+        project={{
+          environmentId: props.pages.environmentId,
+          projectId: props.pages.input.projectId,
+        }}
         onRetry={props.pages.refresh}
       />
     ) : (

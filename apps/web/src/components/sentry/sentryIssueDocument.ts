@@ -18,7 +18,17 @@ function stackTraceMarkdown(detail: SentryIssueDetail): string {
           return context.length > 0 ? `${head}\n${context}` : head;
         })
         .join("\n");
-      return `### ${exception.type}: ${exception.value}\n\n${formatReviewCommentFence("", frames)}`;
+      // Upstream text is untrusted markdown: keep it in code spans and fences.
+      const value = exception.value.includes("\n")
+        ? formatReviewCommentFence("", exception.value)
+        : markdownInlineCode(exception.value);
+      return [
+        `### ${markdownInlineCode(exception.type)}`,
+        value,
+        formatReviewCommentFence("", frames),
+      ]
+        .filter((part) => part.length > 0)
+        .join("\n\n");
     })
     .join("\n\n");
 }

@@ -2,6 +2,7 @@ import {
   type EnvironmentId,
   IssueTrackerError,
   type IssueTrackerSource,
+  type ScopedProjectRef,
   type ScopedThreadRef,
 } from "@t3tools/contracts";
 import { useNavigate } from "@tanstack/react-router";
@@ -32,6 +33,8 @@ import {
 } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
 import { readLocalApi } from "~/localApi";
+
+import { useSettingsProjectGroups } from "../settings/useSettingsProjectGroups";
 
 import { ISSUE_SOURCE_LABELS } from "./issueContext";
 import { ISSUE_TRACKER_ICONS } from "./issueTrackerIcons";
@@ -215,46 +218,80 @@ const SCOPE_NOUNS: Record<IssueTrackerSource, string> = {
   langsmith: "LangSmith projects",
 };
 
-/** The panel body for failures and empty results. `failure` is the query's typed failure. */
+/** Opens Settings > Integrations, scoped to `project`'s settings page when it is given. */
+function OpenIntegrationsSettingsButton(props: { readonly project: ScopedProjectRef | undefined }) {
+  const navigate = useNavigate();
+  const groups = useSettingsProjectGroups();
+  const project = props.project;
+  const projectKey = project
+    ? groups.find((group) =>
+        group.memberProjectRefs.some(
+          (ref) =>
+            ref.environmentId === project.environmentId && ref.projectId === project.projectId,
+        ),
+      )?.projectKey
+    : undefined;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() =>
+        void navigate({
+          to: "/settings/integrations",
+          ...(projectKey ? { search: { project: projectKey } } : {}),
+        })
+      }
+    >
+      Open settings
+    </Button>
+  );
+}
+
+/**
+ * The panel body for failures and empty results. `failure` is the query's typed failure.
+ * `project` scopes the "no mapping" settings link, since mappings are per project.
+ */
 export function IssueTrackerStateView(props: {
   readonly source: IssueTrackerSource;
   readonly failure: unknown;
   readonly error: string | null;
+  readonly project?: ScopedProjectRef;
   readonly emptyMessage?: string;
   readonly onRetry?: () => void;
 }) {
-  const navigate = useNavigate();
   const label = ISSUE_SOURCE_LABELS[props.source];
   const Icon = ISSUE_TRACKER_ICONS[props.source];
   const reason = isIssueTrackerError(props.failure) ? props.failure.reason : null;
   const upstream = isIssueTrackerError(props.failure) ? props.failure.upstreamMessage : undefined;
-  const openSettings = () => void navigate({ to: "/settings/integrations" });
 
-  const view =
+  const view: {
+    readonly title: string;
+    readonly description: string;
+    readonly detail?: string | undefined;
+    readonly action: "settings" | "retry" | null;
+  } =
     reason === "not-configured"
       ? {
           title: `Connect ${label}`,
           description: `Add a ${label} token in Settings > Integrations.`,
-          action: "settings" as const,
+          action: "settings",
         }
       : reason === "no-mapping"
         ? {
             title: `Choose ${SCOPE_NOUNS[props.source]}`,
             description: `Pick which ${SCOPE_NOUNS[props.source]} belong to this project in Settings > Integrations.`,
-            action: "settings" as const,
+            action: "settings",
           }
         : reason === "unauthorized"
           ? {
               title: `${label} rejected the token`,
-              description: upstream ?? "Check the token in Settings > Integrations.",
-              action: "settings" as const,
+              description: "Check the token in Settings > Integrations.",
+              // The service's own words, e.g. an expired or revoked token.
+              detail: upstream,
+              action: "settings",
             }
           : props.error !== null
-            ? {
-                title: `Could not load ${label}`,
-                description: upstream ?? props.error,
-                action: "retry" as const,
-              }
+            ? { title: `Could not load ${label}`, description: props.error, action: "retry" }
             : {
                 title: "Nothing here",
                 description: props.emptyMessage ?? "No results.",
@@ -269,12 +306,13 @@ export function IssueTrackerStateView(props: {
       <EmptyHeader>
         <EmptyTitle>{view.title}</EmptyTitle>
         <EmptyDescription>{view.description}</EmptyDescription>
+        {view.detail ? <EmptyDescription>{view.detail}</EmptyDescription> : null}
       </EmptyHeader>
       {view.action === "settings" ? (
         <EmptyContent>
-          <Button size="sm" variant="outline" onClick={openSettings}>
-            Open settings
-          </Button>
+          <OpenIntegrationsSettingsButton
+            project={reason === "no-mapping" ? props.project : undefined}
+          />
         </EmptyContent>
       ) : view.action === "retry" && props.onRetry ? (
         <EmptyContent>

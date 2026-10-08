@@ -105,7 +105,10 @@ export function LangSmithSettingsRows(props: { readonly environmentId: Environme
                 value: project.id,
                 label: project.name,
               }))}
-              selected={scoped.langsmithProjects.map((project) => project.id)}
+              selected={scoped.langsmithProjects.map((project) => ({
+                value: project.id,
+                label: project.name,
+              }))}
               onChange={(ids) => {
                 // Mapped projects missing from the loaded list keep their stored name.
                 const known = new Map<string, LangSmithProjectRef>(

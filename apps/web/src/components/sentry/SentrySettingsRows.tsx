@@ -120,7 +120,10 @@ export function SentrySettingsRows(props: { readonly environmentId: EnvironmentI
                 value: project.id,
                 label: project.slug,
               }))}
-              selected={scoped.sentryProjects.map((project) => project.id)}
+              selected={scoped.sentryProjects.map((project) => ({
+                value: project.id,
+                label: project.slug,
+              }))}
               onChange={(ids) => {
                 // Mapped projects missing from the loaded list keep their stored slug.
                 const known = new Map<string, SentryProjectRef>(
