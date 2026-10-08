@@ -54,7 +54,7 @@ export function SentrySettingsRows(props: { readonly environmentId: EnvironmentI
       <SettingsRow
         serverScoped
         {...searchableSetting("sentry-credentials")}
-        description="A Sentry auth token with project:read and event:read, plus your organization slug. Leave the URL empty for sentry.io."
+        description="A Sentry auth token with org:read and event:read, plus your organization slug. Leave the URL empty for sentry.io."
         status={credential.status}
         control={
           <div className="flex flex-col items-end gap-1.5">

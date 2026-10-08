@@ -8,11 +8,11 @@ and hand any of them to an agent. Issue trackers are read-only.
 Open **Settings → Integrations → Issue trackers**.
 
 - **Linear:** paste a personal API key (in Linear: Settings → Security & access → API keys).
-- **Sentry:** paste an auth token with `project:read` and `event:read`, and your organization
+- **Sentry:** paste an auth token with `org:read` and `event:read`, and your organization
   slug. Leave the URL empty for sentry.io. Self-hosted or EU-region Sentry needs its URL.
 - **LangSmith:** paste an API key. Leave the endpoint empty for the US cloud. EU-region
   workspaces use `https://eu.api.smith.langchain.com`. For a self-hosted instance, enter its
-  host or its `https://<host>/api/v1` API URL.
+  URL (`https://<host>`) or its `https://<host>/api/v1` API URL.
 
 Tokens stay in the T3 Code server's secret store. They are never sent to any client, including
 your other devices.
@@ -22,7 +22,7 @@ your other devices.
 In the same section, choose Linear teams, Sentry projects, or LangSmith projects. With
 **All projects** selected at the top of Settings, the choice is the environment default. Choose a
 project to override it for that project (see [Settings and project overrides](./project-settings.md)).
-A tracker appears in a thread's right panel once it has a token and the thread's project has a
+A tracker is offered in a thread's right panel once it has a token and the thread's project has a
 selection.
 
 Sentry shows issues seen in the last 14 days. LangSmith shows failed top-level runs from the last
