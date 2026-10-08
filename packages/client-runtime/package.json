@@ -255,6 +255,22 @@
       "types": "./src/state/shell.ts",
       "default": "./src/state/shell.ts"
     },
+    "./state/issue-tracker-scope": {
+      "types": "./src/state/issueTrackerScope.ts",
+      "default": "./src/state/issueTrackerScope.ts"
+    },
+    "./state/langsmith": {
+      "types": "./src/state/langsmith.ts",
+      "default": "./src/state/langsmith.ts"
+    },
+    "./state/linear": {
+      "types": "./src/state/linear.ts",
+      "default": "./src/state/linear.ts"
+    },
+    "./state/sentry": {
+      "types": "./src/state/sentry.ts",
+      "default": "./src/state/sentry.ts"
+    },
     "./state/source-control": {
       "types": "./src/state/sourceControl.ts",
       "default": "./src/state/sourceControl.ts"

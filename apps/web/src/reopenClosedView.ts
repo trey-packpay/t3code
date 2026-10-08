@@ -143,6 +143,11 @@ export async function reopenClosedView(
     case "pull-request":
       panels.openPullRequest(ref, surface);
       break;
+    case "linear-issue":
+    case "sentry-issue":
+    case "langsmith-run":
+      panels.openIssueTrackerItem(ref, surface);
+      break;
     default:
       panels.open(ref, surface.kind);
   }

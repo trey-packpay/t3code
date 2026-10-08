@@ -218,6 +218,9 @@ import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
 import * as HostResources from "./resourceTelemetry/HostResources.ts";
 import * as AnalyticsService from "./telemetry/AnalyticsService.ts";
 import * as UsageService from "./usage/UsageService.ts";
+import * as Linear from "./linear/LinearService.ts";
+import * as Sentry from "./sentry/SentryService.ts";
+import * as LangSmith from "./langsmith/LangSmithService.ts";
 import * as TraceDiagnostics from "./diagnostics/TraceDiagnostics.ts";
 import * as PullRequestService from "./pullRequest/PullRequestService.ts";
 import { listLinkedPullRequestThreads } from "./pullRequest/linkedThreads.ts";
@@ -1311,6 +1314,9 @@ const layerWsRpc = (
       );
       const sourceControlRepositories =
         yield* SourceControlRepositoryService.SourceControlRepositoryService;
+      const linear = yield* Linear.LinearService;
+      const sentry = yield* Sentry.SentryService;
+      const langsmith = yield* LangSmith.LangSmithService;
       const withPullRequestViewer = pullRequests.withRoutingCredential;
       const bootstrapCredentials = yield* PairingGrantStore.PairingGrantStore;
       const sessions = yield* SessionStore.SessionStore;
@@ -2522,6 +2528,15 @@ const layerWsRpc = (
           withPullRequestViewer(input, pullRequests.setLabels(input)),
         [WS_METHODS.sourceControlLookupRepository]: (input) =>
           sourceControlRepositories.lookupRepository(input),
+        [WS_METHODS.linearListTeams]: () => linear.listTeams,
+        [WS_METHODS.linearListIssues]: (input) => linear.listIssues(input),
+        [WS_METHODS.linearIssueDetail]: (input) => linear.issueDetail(input),
+        [WS_METHODS.sentryListProjects]: () => sentry.listProjects,
+        [WS_METHODS.sentryListIssues]: (input) => sentry.listIssues(input),
+        [WS_METHODS.sentryIssueDetail]: (input) => sentry.issueDetail(input),
+        [WS_METHODS.langsmithListProjects]: () => langsmith.listProjects,
+        [WS_METHODS.langsmithListErroredRuns]: (input) => langsmith.listErroredRuns(input),
+        [WS_METHODS.langsmithRunDetail]: (input) => langsmith.runDetail(input),
         [WS_METHODS.sourceControlCloneRepository]: (input) =>
           sourceControlRepositories.cloneRepository(input),
         [WS_METHODS.projectCloneStart]: (input) =>

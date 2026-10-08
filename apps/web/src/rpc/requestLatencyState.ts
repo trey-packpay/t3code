@@ -52,6 +52,9 @@ function shouldTrackRpcAck(method: string): boolean {
   return (
     !method.includes("subscribe") &&
     !method.startsWith("pullRequests.") &&
+    !method.startsWith("linear.") &&
+    !method.startsWith("sentry.") &&
+    !method.startsWith("langsmith.") &&
     !untrackedRpcAckMethods.has(method)
   );
 }

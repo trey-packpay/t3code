@@ -338,6 +338,31 @@ import {
   SourceControlRepositoryInfo,
   SourceControlRepositoryLookupInput,
 } from "./sourceControl.ts";
+import { IssueTrackerError } from "./issueTrackerError.ts";
+import {
+  LinearIssueDetail,
+  LinearIssueDetailInput,
+  LinearListIssuesInput,
+  LinearListIssuesResult,
+  LinearListTeamsInput,
+  LinearListTeamsResult,
+} from "./linear.ts";
+import {
+  SentryIssueDetail,
+  SentryIssueDetailInput,
+  SentryListIssuesInput,
+  SentryListIssuesResult,
+  SentryListProjectsInput,
+  SentryListProjectsResult,
+} from "./sentry.ts";
+import {
+  LangSmithListProjectsInput,
+  LangSmithListProjectsResult,
+  LangSmithListRunsInput,
+  LangSmithListRunsResult,
+  LangSmithRunDetail,
+  LangSmithRunDetailInput,
+} from "./langsmith.ts";
 import { VcsError } from "./vcs.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
@@ -521,6 +546,16 @@ export const WS_METHODS = {
 
   // Source control methods
   sourceControlLookupRepository: "sourceControl.lookupRepository",
+  // Issue tracker methods (desktop UI)
+  linearListTeams: "linear.listTeams",
+  linearListIssues: "linear.listIssues",
+  linearIssueDetail: "linear.issueDetail",
+  sentryListProjects: "sentry.listProjects",
+  sentryListIssues: "sentry.listIssues",
+  sentryIssueDetail: "sentry.issueDetail",
+  langsmithListProjects: "langsmith.listProjects",
+  langsmithListErroredRuns: "langsmith.listErroredRuns",
+  langsmithRunDetail: "langsmith.runDetail",
   sourceControlCloneRepository: "sourceControl.cloneRepository",
   sourceControlPublishRepository: "sourceControl.publishRepository",
   projectCloneStart: "projectClone.start",
@@ -1086,6 +1121,56 @@ const WsSourceControlLookupRepositoryRpc = Rpc.make(WS_METHODS.sourceControlLook
   payload: SourceControlRepositoryLookupInput,
   success: SourceControlRepositoryInfo,
   error: Schema.Union([SourceControlRepositoryError, EnvironmentAuthorizationError]),
+});
+
+const IssueTrackerRpcError = Schema.Union([IssueTrackerError, EnvironmentAuthorizationError]);
+
+const WsLinearListTeamsRpc = Rpc.make(WS_METHODS.linearListTeams, {
+  payload: LinearListTeamsInput,
+  success: LinearListTeamsResult,
+  error: IssueTrackerRpcError,
+});
+const WsLinearListIssuesRpc = Rpc.make(WS_METHODS.linearListIssues, {
+  payload: LinearListIssuesInput,
+  success: LinearListIssuesResult,
+  error: IssueTrackerRpcError,
+});
+const WsLinearIssueDetailRpc = Rpc.make(WS_METHODS.linearIssueDetail, {
+  payload: LinearIssueDetailInput,
+  success: LinearIssueDetail,
+  error: IssueTrackerRpcError,
+});
+
+const WsSentryListProjectsRpc = Rpc.make(WS_METHODS.sentryListProjects, {
+  payload: SentryListProjectsInput,
+  success: SentryListProjectsResult,
+  error: IssueTrackerRpcError,
+});
+const WsSentryListIssuesRpc = Rpc.make(WS_METHODS.sentryListIssues, {
+  payload: SentryListIssuesInput,
+  success: SentryListIssuesResult,
+  error: IssueTrackerRpcError,
+});
+const WsSentryIssueDetailRpc = Rpc.make(WS_METHODS.sentryIssueDetail, {
+  payload: SentryIssueDetailInput,
+  success: SentryIssueDetail,
+  error: IssueTrackerRpcError,
+});
+
+const WsLangSmithListProjectsRpc = Rpc.make(WS_METHODS.langsmithListProjects, {
+  payload: LangSmithListProjectsInput,
+  success: LangSmithListProjectsResult,
+  error: IssueTrackerRpcError,
+});
+const WsLangSmithListErroredRunsRpc = Rpc.make(WS_METHODS.langsmithListErroredRuns, {
+  payload: LangSmithListRunsInput,
+  success: LangSmithListRunsResult,
+  error: IssueTrackerRpcError,
+});
+const WsLangSmithRunDetailRpc = Rpc.make(WS_METHODS.langsmithRunDetail, {
+  payload: LangSmithRunDetailInput,
+  success: LangSmithRunDetail,
+  error: IssueTrackerRpcError,
 });
 
 const WsSourceControlCloneRepositoryRpc = Rpc.make(WS_METHODS.sourceControlCloneRepository, {
@@ -1834,6 +1919,15 @@ export const WsRpcGroup = RpcGroup.make(
   WsPullRequestsLabelCandidatesRpc,
   WsPullRequestsSetLabelsRpc,
   WsSourceControlLookupRepositoryRpc,
+  WsLinearListTeamsRpc,
+  WsLinearListIssuesRpc,
+  WsLinearIssueDetailRpc,
+  WsSentryListProjectsRpc,
+  WsSentryListIssuesRpc,
+  WsSentryIssueDetailRpc,
+  WsLangSmithListProjectsRpc,
+  WsLangSmithListErroredRunsRpc,
+  WsLangSmithRunDetailRpc,
   WsSourceControlCloneRepositoryRpc,
   WsSourceControlPublishRepositoryRpc,
   WsProjectCloneStartRpc,

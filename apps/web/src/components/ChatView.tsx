@@ -248,7 +248,10 @@ import {
 } from "../rightPanelLayout";
 import { PopoverCreateHandle } from "./ui/popover";
 import {
+  linearIssueSurface,
   pullRequestSurface,
+  sentryIssueSurface,
+  langsmithRunSurface,
   selectActiveRightPanel,
   selectActiveRightPanelSurface,
   selectThreadPanelOpen,
@@ -284,7 +287,15 @@ import {
 import { PullRequestDetailPanel } from "./pullRequest/PullRequestDetailPanel";
 import { PullRequestDetailGhost } from "./pullRequest/PullRequestGhosts";
 import { PullRequestsUnavailableState } from "./pullRequest/PullRequestsUnavailableState";
-import { RightPanelTabs } from "./RightPanelTabs";
+import { type IssueTrackerPanelAction, RightPanelTabs } from "./RightPanelTabs";
+import { IssueTrackerDesktopOnlyState } from "./issues/IssuePanelChrome";
+import { useIssueTrackerAvailability } from "./issues/useIssueTrackerAvailability";
+import { LinearIssueDetailPanel } from "./linear/LinearIssueDetailPanel";
+import { LinearIssuesPanel } from "./linear/LinearIssuesPanel";
+import { SentryIssueDetailPanel } from "./sentry/SentryIssueDetailPanel";
+import { SentryIssuesPanel } from "./sentry/SentryIssuesPanel";
+import { LangSmithRunDetailPanel } from "./langsmith/LangSmithRunDetailPanel";
+import { LangSmithRunsPanel } from "./langsmith/LangSmithRunsPanel";
 import { LinkPullRequestDialogHost } from "./pullRequest/LinkPullRequestDialog";
 import { ThreadPullRequestsPanel } from "./pullRequest/ThreadPullRequestsPanel";
 import { useDeviceState } from "~/state/device";
@@ -5420,6 +5431,39 @@ export default function ChatView(props: ChatViewProps) {
     if (!activeThreadRef || !pullRequestsSurfaceAvailable) return;
     useRightPanelStore.getState().open(activeThreadRef, "pull-requests");
   }, [activeThreadRef, pullRequestsSurfaceAvailable]);
+  const issueTrackers = useIssueTrackerAvailability(
+    activeThread?.environmentId ?? null,
+    activeThread?.projectId ?? null,
+  );
+  const issueTrackerActions = useMemo<ReadonlyArray<IssueTrackerPanelAction>>(() => {
+    if (!isElectron || activeThreadRef === null) return [];
+    const actions: IssueTrackerPanelAction[] = [];
+    if (issueTrackers.linear) {
+      actions.push({
+        key: "linear",
+        label: "Linear issues",
+        shortcut: "I",
+        onClick: () => useRightPanelStore.getState().open(activeThreadRef, "linear-issues"),
+      });
+    }
+    if (issueTrackers.sentry) {
+      actions.push({
+        key: "sentry",
+        label: "Sentry issues",
+        shortcut: "S",
+        onClick: () => useRightPanelStore.getState().open(activeThreadRef, "sentry-issues"),
+      });
+    }
+    if (issueTrackers.langsmith) {
+      actions.push({
+        key: "langsmith",
+        label: "LangSmith runs",
+        shortcut: "R",
+        onClick: () => useRightPanelStore.getState().open(activeThreadRef, "langsmith-runs"),
+      });
+    }
+    return actions;
+  }, [activeThreadRef, issueTrackers.langsmith, issueTrackers.linear, issueTrackers.sentry]);
   const { state: deviceState, loaded: deviceStateLoaded } = useDeviceState(
     activeThreadRef?.environmentId ?? null,
   );
@@ -10948,6 +10992,96 @@ export default function ChatView(props: ChatViewProps) {
       />
     ) : renderedRightPanelSurface?.kind === "pull-requests" && activeThreadRef ? (
       <ThreadPullRequestsPanel threadRef={activeThreadRef} />
+    ) : renderedRightPanelSurface?.kind === "linear-issues" && activeThreadRef ? (
+      isElectron ? (
+        <LinearIssuesPanel
+          environmentId={activeThread.environmentId}
+          projectId={activeThread.projectId}
+          onOpenIssue={(identifier) =>
+            useRightPanelStore
+              .getState()
+              .openIssueTrackerItem(
+                activeThreadRef,
+                linearIssueSurface({ projectId: activeThread.projectId, identifier }),
+              )
+          }
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "linear-issue" && activeThreadRef ? (
+      isElectron ? (
+        <LinearIssueDetailPanel
+          key={renderedRightPanelSurface.id}
+          environmentId={activeThread.environmentId}
+          projectId={renderedRightPanelSurface.projectId}
+          identifier={renderedRightPanelSurface.identifier}
+          threadRef={activeThreadRef}
+          composerDraftTarget={composerDraftTarget}
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "sentry-issues" && activeThreadRef ? (
+      isElectron ? (
+        <SentryIssuesPanel
+          environmentId={activeThread.environmentId}
+          projectId={activeThread.projectId}
+          onOpenIssue={(target) =>
+            useRightPanelStore
+              .getState()
+              .openIssueTrackerItem(
+                activeThreadRef,
+                sentryIssueSurface({ projectId: activeThread.projectId, ...target }),
+              )
+          }
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "sentry-issue" && activeThreadRef ? (
+      isElectron ? (
+        <SentryIssueDetailPanel
+          key={renderedRightPanelSurface.id}
+          environmentId={activeThread.environmentId}
+          projectId={renderedRightPanelSurface.projectId}
+          issueId={renderedRightPanelSurface.issueId}
+          threadRef={activeThreadRef}
+          composerDraftTarget={composerDraftTarget}
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "langsmith-runs" && activeThreadRef ? (
+      isElectron ? (
+        <LangSmithRunsPanel
+          environmentId={activeThread.environmentId}
+          projectId={activeThread.projectId}
+          onOpenRun={(target) =>
+            useRightPanelStore
+              .getState()
+              .openIssueTrackerItem(
+                activeThreadRef,
+                langsmithRunSurface({ projectId: activeThread.projectId, ...target }),
+              )
+          }
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
+    ) : renderedRightPanelSurface?.kind === "langsmith-run" && activeThreadRef ? (
+      isElectron ? (
+        <LangSmithRunDetailPanel
+          key={renderedRightPanelSurface.id}
+          environmentId={activeThread.environmentId}
+          projectId={renderedRightPanelSurface.projectId}
+          runId={renderedRightPanelSurface.runId}
+          threadRef={activeThreadRef}
+          composerDraftTarget={composerDraftTarget}
+        />
+      ) : (
+        <IssueTrackerDesktopOnlyState />
+      )
     ) : renderedRightPanelSurface?.kind === "device" ? (
       <Suspense fallback={null}>
         <DevicePanel
@@ -11855,6 +11989,7 @@ export default function ChatView(props: ChatViewProps) {
           pullRequestAvailable={pullRequestSurfaceAvailable}
           pullRequestsAvailable={pullRequestsSurfaceAvailable}
           deviceAvailable={activeThreadRef !== null}
+          issueTrackerActions={issueTrackerActions}
         >
           {rightPanelContent}
         </RightPanelTabs>
@@ -11913,6 +12048,7 @@ export default function ChatView(props: ChatViewProps) {
             pullRequestAvailable={pullRequestSurfaceAvailable}
             pullRequestsAvailable={pullRequestsSurfaceAvailable}
             deviceAvailable={activeThreadRef !== null}
+            issueTrackerActions={issueTrackerActions}
           >
             {rightPanelContent}
           </RightPanelTabs>

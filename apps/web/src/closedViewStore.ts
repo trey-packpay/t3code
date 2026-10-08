@@ -93,6 +93,26 @@ const isClosedViewEntry = (entry: unknown): entry is ClosedViewEntry => {
         (surface.host === undefined || typeof surface.host === "string") &&
         (surface.url === undefined || typeof surface.url === "string")
       );
+    case "linear-issues":
+      return surface.id === surface.kind;
+    case "linear-issue":
+      return typeof surface.projectId === "string" && typeof surface.identifier === "string";
+    case "sentry-issues":
+      return surface.id === surface.kind;
+    case "sentry-issue":
+      return (
+        typeof surface.projectId === "string" &&
+        typeof surface.issueId === "string" &&
+        typeof surface.shortId === "string"
+      );
+    case "langsmith-runs":
+      return surface.id === surface.kind;
+    case "langsmith-run":
+      return (
+        typeof surface.projectId === "string" &&
+        typeof surface.runId === "string" &&
+        typeof surface.name === "string"
+      );
     default:
       return false;
   }
